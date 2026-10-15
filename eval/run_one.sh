@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Run one harness on one sheet in an isolated folder that holds only the drawing and the skill.
 # Usage: eval/run_one.sh <harness: claude|codex|deepagents> <model> <sheet, e.g. open100-1> <repeat>
-# EFFORT=medium sets the Deep Agents reasoning effort; TILED=1 or WHOLE=1 runs pass 1 in code (per tile or one whole-sheet call), PIPE_MODEL sets the agent model after pass 1 (Deep Agents only).
+# EFFORT=medium sets the Deep Agents reasoning effort; TILED=1 or WHOLE=1 runs pass 1 in code (per tile or one whole-sheet call), PIPES=oneshot does pass 2 in one call instead of an agent, PIPE_MODEL sets the agent model after pass 1 (Deep Agents only).
 set -euo pipefail
 
 harness=$1 model=$2 sheet=$3 rep=$4
 repo=$(cd "$(dirname "$0")/.." && pwd)
 for img in "$repo/samples/$sheet.png" "$repo/samples/$sheet.jpg"; do [ -f "$img" ] && break; done
 ext=${img##*.}
-out="$repo/runs/$harness-$model${EFFORT:+-$EFFORT}${TILED:+-tiled}${WHOLE:+-whole}${PIPE_MODEL:+-agent-$PIPE_MODEL}/$sheet/r$rep"
+out="$repo/runs/$harness-$model${EFFORT:+-$EFFORT}${TILED:+-tiled}${WHOLE:+-whole}${PIPES:+-$PIPES${ROUNDS:+$ROUNDS}}${PIPE_MODEL:+-agent-$PIPE_MODEL}/$sheet/r$rep"
 work=$(mktemp -d "${TMPDIR:-/tmp}/pid-run.XXXXXX")
 
 cp "$img" "$work/drawing.$ext"
@@ -24,7 +24,7 @@ case $harness in
             --output-format json "$prompt" > transcript.json 2>&1 || true ;;
   codex) timeout 2400 codex exec -m "$model" -s workspace-write --skip-git-repo-check "$prompt" \
             > transcript.txt 2>&1 || true ;;
-  deepagents) timeout 2400 "$repo/.venv/bin/python" "$repo/agent/run.py" "$work" --model "$model" ${EFFORT:+--effort "$EFFORT"} ${TILED:+--tiled} ${WHOLE:+--whole} ${PIPE_MODEL:+--pipe-model "$PIPE_MODEL"} \
+  deepagents) timeout 2400 "$repo/.venv/bin/python" "$repo/agent/run.py" "$work" --model "$model" ${EFFORT:+--effort "$EFFORT"} ${TILED:+--tiled} ${WHOLE:+--whole} ${PIPES:+--pipes $PIPES} ${ROUNDS:+--rounds $ROUNDS} ${PIPE_MODEL:+--pipe-model "$PIPE_MODEL"} \
             > transcript.txt 2>&1 || true ;;
 esac
 secs=$(( $(date +%s) - start ))

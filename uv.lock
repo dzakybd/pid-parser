@@ -1023,6 +1023,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "deepagents" },
+    { name = "langchain-google-genai" },
     { name = "langchain-openai" },
     { name = "networkx" },
     { name = "opencv-python-headless" },
@@ -1033,6 +1034,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "deepagents", specifier = ">=0.7.25" },
+    { name = "langchain-google-genai", specifier = ">=4.4.2" },
     { name = "langchain-openai", specifier = "==1.7.2" },
     { name = "networkx", specifier = ">=3.7" },
     { name = "opencv-python-headless", specifier = ">=5.0.0.93" },

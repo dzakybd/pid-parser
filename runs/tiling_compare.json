@@ -118,5 +118,243 @@
     "precision": 0.96,
     "recall": 1.0,
     "f1": 0.98
+  },
+  {
+    "sheet": "open100-10",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 76,
+    "gt": 134,
+    "precision": 1.0,
+    "recall": 0.57,
+    "f1": 0.72
+  },
+  {
+    "sheet": "open100-10",
+    "mode": "tiled",
+    "calls": 6,
+    "pred": 143,
+    "gt": 134,
+    "precision": 0.85,
+    "recall": 0.91,
+    "f1": 0.88
+  },
+  {
+    "sheet": "open100-4",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 83,
+    "gt": 97,
+    "precision": 1.0,
+    "recall": 0.86,
+    "f1": 0.92
+  },
+  {
+    "sheet": "open100-4",
+    "mode": "tiled",
+    "calls": 4,
+    "pred": 112,
+    "gt": 97,
+    "precision": 0.78,
+    "recall": 0.9,
+    "f1": 0.83
+  },
+  {
+    "sheet": "open100-4",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 78,
+    "gt": 97,
+    "precision": 1.0,
+    "recall": 0.8,
+    "f1": 0.89
+  },
+  {
+    "sheet": "open100-4",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 4,
+    "pred": 88,
+    "gt": 97,
+    "precision": 0.91,
+    "recall": 0.82,
+    "f1": 0.86
+  },
+  {
+    "sheet": "open100-10",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 70,
+    "gt": 134,
+    "precision": 0.96,
+    "recall": 0.5,
+    "f1": 0.66
+  },
+  {
+    "sheet": "open100-10",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 6,
+    "pred": 109,
+    "gt": 134,
+    "precision": 0.96,
+    "recall": 0.78,
+    "f1": 0.86
+  },
+  {
+    "sheet": "open100-0",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 93,
+    "gt": 102,
+    "precision": 1.0,
+    "recall": 0.91,
+    "f1": 0.95
+  },
+  {
+    "sheet": "open100-0",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 6,
+    "pred": 105,
+    "gt": 102,
+    "precision": 0.9,
+    "recall": 0.93,
+    "f1": 0.92
+  },
+  {
+    "sheet": "open100-2",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 69,
+    "gt": 101,
+    "precision": 1.0,
+    "recall": 0.68,
+    "f1": 0.81
+  },
+  {
+    "sheet": "open100-2",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 6,
+    "pred": 75,
+    "gt": 101,
+    "precision": 0.92,
+    "recall": 0.68,
+    "f1": 0.78
+  },
+  {
+    "sheet": "open100-11",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 80,
+    "gt": 96,
+    "precision": 0.99,
+    "recall": 0.82,
+    "f1": 0.9
+  },
+  {
+    "sheet": "open100-11",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 6,
+    "pred": 99,
+    "gt": 96,
+    "precision": 0.94,
+    "recall": 0.97,
+    "f1": 0.95
+  },
+  {
+    "sheet": "dpid-430",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 91,
+    "gt": 108,
+    "precision": 0.98,
+    "recall": 0.82,
+    "f1": 0.89
+  },
+  {
+    "sheet": "dpid-430",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 12,
+    "pred": 119,
+    "gt": 108,
+    "precision": 0.9,
+    "recall": 0.99,
+    "f1": 0.94
+  },
+  {
+    "sheet": "dpid-126",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 136,
+    "gt": 177,
+    "precision": 0.96,
+    "recall": 0.73,
+    "f1": 0.83
+  },
+  {
+    "sheet": "dpid-126",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 12,
+    "pred": 199,
+    "gt": 177,
+    "precision": 0.88,
+    "recall": 0.99,
+    "f1": 0.93
+  },
+  {
+    "sheet": "dpid-156",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 74,
+    "gt": 181,
+    "precision": 0.96,
+    "recall": 0.39,
+    "f1": 0.56
+  },
+  {
+    "sheet": "dpid-156",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 12,
+    "pred": 187,
+    "gt": 181,
+    "precision": 0.94,
+    "recall": 0.97,
+    "f1": 0.95
+  },
+  {
+    "sheet": "dpid-36",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 85,
+    "gt": 183,
+    "precision": 0.95,
+    "recall": 0.44,
+    "f1": 0.6
+  },
+  {
+    "sheet": "dpid-36",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 12,
+    "pred": 195,
+    "gt": 183,
+    "precision": 0.93,
+    "recall": 0.99,
+    "f1": 0.96
   }
 ]
