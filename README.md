@@ -104,3 +104,5 @@ Tried and dropped:
 
 - **PID2Graph:** [Zenodo 14803338](https://zenodo.org/records/14803338), CC BY-SA 4.0 (paper: [arXiv 2411.13929](https://arxiv.org/abs/2411.13929)).
 - **OPEN100 sheets:** from the Energy Impact Center ([open-100.com](https://open-100.com)), with no licence stated. They are not redistributed here: `fetch_samples.py` downloads them, and `samples/` and run outputs stay out of git.
+
+Code in this repo is MIT licensed (see `LICENSE`). The datasets above keep their own terms.

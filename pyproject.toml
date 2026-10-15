@@ -2,6 +2,7 @@
 name = "pid-parser"
 version = "0.1.0"
 description = "P&ID image to tables and graph: agent skill, Deep Agents runner and evaluation"
+license = "MIT"
 readme = "README.md"
 authors = [
     { name = "Dzaky Zakiyal Fawwaz", email = "dzakybd@gmail.com" }
