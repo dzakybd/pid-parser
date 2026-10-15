@@ -1,6 +1,13 @@
 # pid-parser
 
-Turn a P&ID (piping and instrumentation diagram) image into a graph of components and pipe connections, ready for an RDBMS or a graph database. No GPU or training: a vision-language model finds the symbols, and small scripts do the tiling, the connections (traditional computer vision: thresholding and connected-component labeling), checking and export.
+Turn a P&ID drawing into data you can ask: SQL tables and a graph that people and AI agents can query. A vision model finds the symbols, and traditional computer vision (thresholding and connected-component labeling) finds the connections. No GPU or training. Exports CSV, SQL, GraphML and Cypher for an RDBMS or a graph database.
+
+Two versions:
+
+1. **A skill for coding agents** (Claude Code, Codex and others): `npx skills add dzakybd/pid-parser`
+2. **A LangChain Deep Agents version** you can run in your own agent workflow (`agent/run.py`)
+
+Data: [PID2Graph](https://zenodo.org/records/14803338), an open dataset (CC BY-SA 4.0). Results are on one very dense sheet from it.
 
 Useful for: asking the drawing questions (which valves sit between this pump and that tank), counting and listing components, checking what a valve isolates, loading the data into SQL, spreadsheets or Neo4j, giving an assistant a graph instead of a picture, and flagging isolated valves in a review. I tested the conversion on one dense sheet, not these workflows.
 
@@ -8,7 +15,7 @@ The repo has three parts:
 
 - `skills/pid-parser/`: an agent skill for Claude Code, Codex and other harnesses that load `SKILL.md` skills
 - `agent/run.py`: the same skill run by a LangChain Deep Agent on a ChatGPT sign-in (no API key)
-- `eval/`: scoring against the PID2Graph ground truth on a handful of sheets
+- `eval/`: scoring against the PID2Graph ground truth on the dense sheet
 
 See the dense sample sheet converted (Sonnet 5.5 skill and gpt-6-luna Deep Agents runs), no install needed: [huggingface.co/spaces/dzakybd/pid-parser](https://huggingface.co/spaces/dzakybd/pid-parser). The write-up, step by step: [dzaky.ai.id/en/blog/pid-parser-pid-to-graph](https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph) ([Bahasa Indonesia](https://dzaky.ai.id/id/blog/pid-parser-pid-to-graph)).
 

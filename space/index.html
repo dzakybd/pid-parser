@@ -53,10 +53,10 @@ footer { margin-top: 28px; font-size: 13px; color: var(--muted); }
 </head>
 <body>
 <main>
-  <h1>pid-parser</h1>
-  <p class="muted">A P&amp;ID image in, tables and a graph out. A vision-language model finds the symbols tile by tile; the connections come from traditional computer vision (thresholding and connected-component labeling, no model); small scripts validate the graph and export it for SQL or a graph database. No GPU, no training.</p>
+  <h1>Your P&amp;ID drawing, now data you can ask</h1>
+  <p class="muted">SQL tables and a graph that people and AI agents can query. A vision-language model finds the symbols tile by tile; the connections come from traditional computer vision (thresholding and connected-component labeling, no model); small scripts validate the graph and export it. No GPU, no training.</p>
   <pre>npx skills add dzakybd/pid-parser</pre>
-  <p class="muted" style="margin-top:8px">Works in Claude Code, Codex and other skill-aware agents, or as a LangChain Deep Agent. Source: <a href="https://github.com/dzakybd/pid-parser">github.com/dzakybd/pid-parser</a>. How it works, step by step: <a href="https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph">the write-up</a>. The sheet is one very dense P&amp;ID (190 symbols, 732 connected symbol pairs); the two tabs are two runs on it. These results were computed ahead of time; this page calls no model.</p>
+  <p class="muted" style="margin-top:8px">Two versions: a skill for coding agents such as Claude Code and Codex, and a LangChain Deep Agents version for your own agent workflow. Source: <a href="https://github.com/dzakybd/pid-parser">github.com/dzakybd/pid-parser</a>. How it works, step by step: <a href="https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph">the write-up</a>. The sheet is one very dense P&amp;ID (190 symbols, 732 connected symbol pairs); the two tabs are two runs on it. These results were computed ahead of time; this page calls no model.</p>
 
   <div class="tabs" id="tabs" role="group" aria-label="Sheet"></div>
   <div class="stats" id="stats"></div>
