@@ -1,6 +1,6 @@
 # pid-parser
 
-Turn a P&ID (piping and instrumentation diagram) image into a graph of components and pipe connections, ready for an RDBMS or a graph database. No GPU or training: a vision-language model reads the drawing, and small scripts do the tiling, checking and export.
+Turn a P&ID (piping and instrumentation diagram) image into a graph of components and pipe connections, ready for an RDBMS or a graph database. No GPU or training: a vision-language model finds the symbols, and small scripts do the tiling, the connections (read from the pixels), checking and export.
 
 The repo has three parts:
 
@@ -16,7 +16,7 @@ See it on three sample sheets, no install needed: [huggingface.co/spaces/dzakybd
 npx skills add dzakybd/pid-parser
 ```
 
-Then ask your agent: *"Use the pid-parser skill to parse drawing.png into a graph."* The skill scripts need Python 3.9+ and Pillow; with [uv](https://docs.astral.sh/uv/) installed they fetch Pillow themselves.
+Then ask your agent: *"Use the pid-parser skill to parse drawing.png into a graph."* The skill scripts need Python 3.9+, Pillow, NumPy and SciPy; with [uv](https://docs.astral.sh/uv/) installed they fetch Pillow themselves.
 
 ## What you get
 
@@ -45,11 +45,11 @@ Node types: valve, control_valve, relief_valve, check_valve, pump, compressor, t
 
 1. `tile.py` cuts the sheet into overlapping tiles with a coordinate grid in original pixels.
 2. Pass 1: the model lists every symbol tile by tile, and duplicates from the overlaps are merged.
-3. Pass 2: `mark.py` draws each symbol's id on the tiles, and the model follows every line between ids.
-4. `validate.py` checks the graph (ids, types, boxes, dangling edges, suspicious tags, isolated valves), and the model fixes what it flags.
+3. Pass 2: `connect.py` reads the connections from the pixels, with no model. It erases the symbol boxes from the binarized drawing, labels the line pieces that are left, and links the symbols that touch the same piece. A network that reaches three or more symbols becomes a `junction`.
+4. `validate.py` checks the graph (ids, types, boxes, dangling edges, suspicious tags, isolated valves).
 5. `export.py` writes the tables and graph files.
 
-Reading symbols and reading connections are separate passes on purpose. Symbols are local, so tiles help. Pipes run across the whole sheet, so the connection pass needs the full drawing in view.
+The model only has to find symbols and boxes, which is local work that tiles handle well. The connections are the part a model did worst and slowest, and the pixels answer them: on the dense sheet below the connection F1 went from 0.20 (agent reading the pipes) to 0.66 on average, with 20x fewer tokens. The catch is that it depends on exact boxes and clean lines (see Results).
 
 ## Deep Agents runner (ChatGPT sign-in)
 
@@ -61,7 +61,7 @@ mkdir -p work/skills && cp -R skills/pid-parser work/skills/ && cp drawing.png w
 uv run python agent/run.py work --model gpt-6.1-sol --effort low --tiled
 ```
 
-This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile. A Deep Agent then does the connections, validation and export, on `--pipe-model` if you want a different model for that part. Low and medium effort scored the same within noise; low took about 30% less time. `--whole` does pass 1 in one call on the whole sheet instead (see Results). Without either flag, one agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
+This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile, then runs `connect.py`, `validate.py` and `export.py`: no agent loop, one model call per tile. Low and medium effort scored the same within noise; low took about 30% less time. `--whole` does pass 1 in one call on the whole sheet instead (see Results). Without either flag, one Deep Agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
 
 Tested with Python 3.12, deepagents 0.7.25, langchain-openai 1.7.2, langchain-core 1.6.10, langgraph 1.2.15.
 
@@ -82,6 +82,25 @@ Scoring needs no model, only the ground truth:
 PID2Graph has no tag text, so tag accuracy is not scored.
 
 ### Results
+
+#### One very dense sheet: whole image vs this pipeline
+
+`dpid-269` (PID2Graph "Dataset PID"): 190 symbols and 732 symbol pairs on one sheet, the densest of the benchmark. "Whole" is one model call on the whole image that returns the graph (`eval/whole_baseline.py`). "Ours" is tiles for the symbols, then `connect.py` for the connections. Same scorer, no model in the scoring. The skill runs on Claude Sonnet 5.5, the Deep Agents runner on gpt-6-luna (low effort).
+
+| Harness / model | Approach | Symbol F1 | Connection F1 | Time | Cost |
+|---|---|---|---|---|---|
+| Skill, Sonnet 5.5 | whole image | 0.84 | 0.29 | 1.4 min | $0.34 |
+| Skill, Sonnet 5.5 | **tiles + `connect.py`** | **0.99** | **0.96** | 3.2 min | $0.74 |
+| Deep Agents, gpt-6-luna | whole image | 0.34 | 0.08 | 20 s | 12K tokens |
+| Deep Agents, gpt-6-luna | tiles + agent reads pipes | 0.88 | 0.20 | 2.3 min | 480K tokens |
+| Deep Agents, gpt-6-luna | tiles + one call per tile reads pipes | 0.76 | 0.22 | 48 s | 49K tokens |
+| Deep Agents, gpt-6-luna | **tiles + `connect.py`** (3 runs) | 0.81-0.89 | **0.54-0.77** (mean 0.66) | 35 s | 25K tokens |
+
+Single runs for Sonnet, three for luna; luna's symbol pass varies from run to run and the connection score follows it. With the true symbol boxes, `connect.py` alone scores 0.98 connection F1 on this sheet (`eval/cv_connect.py`), so the remaining gap is symbol quality, not the line reading.
+
+It does not win everywhere. On the simple OPEN100 and synthetic sheets, the earlier gpt-6.1-sol agent that read the pipes scored as well or better (0.84 / 0.75 / 1.0 / 0.81 connection F1 on `open100-0`, `open100-1`, `synth-1`, `synth-2`, against 0.78 / 0.74 / 0.77 / 0.58 for `connect.py` on the same symbols), at about ten times the tokens. Real scans and dashed signal lines are where reading pixels loses.
+
+#### Earlier runs: a model reads the pipes (previous version of the skill)
 
 One run per sheet, so differences under about 0.15 are noise.
 
@@ -110,9 +129,9 @@ Tiles or the whole sheet for pass 1 (gpt-6.1-sol, low effort, one run per sheet;
 
 Tried and dropped:
 
-- Reading connections tile by tile, including carrying pipe ends from one tile to the next. It peaked at 0.44 F1 and errors compounded across tiles.
+- Having a model read the connections (the version of the skill that produced the table below): a Deep Agent, one big call, or one call per tile. All lost to `connect.py` on the dense sheet. Reading connections tile by tile, including carrying pipe ends from one tile to the next. It peaked at 0.44 F1 and errors compounded across tiles.
 - Joining pipe pieces by their line-number label. Line numbers run through inline valves, so this over-merges.
-- An OpenCV line tracer. The goal was a VLM-only pipeline, and the tracer was fragile once the symbol boxes were not exact.
+- A first OpenCV line tracer, fragile once the symbol boxes were not exact. The version in `connect.py` is simpler (connected components after erasing the boxes) and is now the default; it is still only as good as the boxes.
 
 ## Data and licences
 

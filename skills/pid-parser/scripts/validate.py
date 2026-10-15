@@ -85,8 +85,8 @@ def check(graph):
     alone = [n for n in symbols if degree[n.get("id")] == 0]
     if len(symbols) >= 4 and len(alone) > ISOLATED_MAX * len(symbols):
         errors.append(
-            f"{len(alone)} of {len(symbols)} symbols have no connection: the pipe pass is not finished "
-            "(open the marked tiles you have not read yet and add their pipes)"
+            f"{len(alone)} of {len(symbols)} symbols have no connection: connect.py has not run, or the "
+            "symbol boxes miss their lines (check the boxes against the image it was given)"
         )
 
     tags = Counter(n["tag"] for n in nodes if n.get("tag"))

@@ -2,28 +2,21 @@
 
 One-time login: uv run python -c "from langchain_openai.chatgpt_oauth import login_chatgpt; login_chatgpt()"
 
-Usage: uv run python agent/run.py <workdir> [--model gpt-6.1-sol] [--effort low|medium|high] [--tiled | --whole] [--pipes agent|oneshot] [--pipe-model MODEL]
+Usage: uv run python agent/run.py <workdir> [--model gpt-6.1-sol] [--effort low|medium|high] [--tiled | --whole]
 The workdir must contain the drawing (drawing.png or drawing.jpg) and skills/pid-parser/.
 
---tiled: code runs pass 1 (symbols) tile by tile, one model call per tile, so no tile is skipped.
-The agent then reads the connections on the whole sheet (pass 2), validates and exports, on
---pipe-model if set. Per-tile connection passes were tried and lost to the whole-sheet agent:
-pipes cross tiles, so reading them needs the whole sheet.
+Without a flag the agent runs the whole skill: it reads the tiles for the symbols, then runs connect.py.
+
+--tiled: code runs pass 1 (symbols) tile by tile, one model call per tile, so no tile is skipped. Then code runs
+connect.py (the connections, from the pixels, no model), validate.py and export.py. No agent loop.
 
 --whole: like --tiled, but pass 1 is one call on the whole sheet (downscaled to MAX_SIDE like tile.py).
-The tiles are still made for the agent's pipe pass.
 
---pipes oneshot (needs --tiled or --whole): pass 2 is one model call that sees the marked overview and every
-marked tile at once, then code adds the edges, validates and exports. No agent loop, so the images are sent once
-instead of being re-sent on every turn of a conversation. --rounds N adds N follow-up calls that ask only for
-the pipes still missing, given the ones found so far.
-
-run.json counts the tokens of every model call: pass 1, and the agent or the one-shot call.
+run.json counts the tokens of every model call.
 """
 
 import argparse
 import base64
-import copy
 import io
 import json
 import subprocess
@@ -40,6 +33,7 @@ from langchain_openai.chat_models.codex import _ChatOpenAICodex
 from PIL import Image
 from pydantic import BaseModel
 
+TILE_RETRIES = 2  # extra tries for a tile whose answer could not be parsed
 MAX_RETRIES = 2  # times the agent is sent back when validate.py still fails after it stops
 MAX_SIDE = 3600  # same as skills/pid-parser/scripts/tile.py; larger images exceed the API's image limit
 
@@ -89,6 +83,24 @@ def to_original(bbox, tile_box):
     return [tx1 + bbox[0] * sx, ty1 + bbox[1] * sy, tx1 + bbox[2] * sx, ty1 + bbox[3] * sy]
 
 
+def batch_retry(structured, requests, names):
+    """Run one call per request. A small model sometimes answers a crowded tile with free text instead of the
+    schema, so failed calls are retried; a call that still fails comes back as None, with a warning."""
+    results = structured.batch(requests, config={"max_concurrency": 4}, return_exceptions=True)
+    for _ in range(TILE_RETRIES):
+        bad = [i for i, r in enumerate(results) if isinstance(r, Exception)]
+        if not bad:
+            break
+        again = structured.batch([requests[i] for i in bad], config={"max_concurrency": 4}, return_exceptions=True)
+        for i, r in zip(bad, again):
+            results[i] = r
+    for i, r in enumerate(results):
+        if isinstance(r, Exception):
+            print(f"warning: tile {names[i]} gave no answer ({type(r).__name__})")
+            results[i] = None
+    return results
+
+
 def tile_symbols(model, tiles_dir):
     meta = json.loads((tiles_dir / "tiles.json").read_text())
     requests = []
@@ -104,10 +116,10 @@ def tile_symbols(model, tiles_dir):
                 )
             ]
         )
-    results = model.with_structured_output(TileSymbols).batch(requests, config={"max_concurrency": 4})
+    results = batch_retry(model.with_structured_output(TileSymbols), requests, [t["file"] for t in meta["tiles"]])
     detections = []  # (index of the tile that saw it, symbol in original pixels)
     for i, (t, r) in enumerate(zip(meta["tiles"], results)):
-        for s in r.symbols:
+        for s in r.symbols if r else []:
             if len(s.bbox) == 4:
                 detections.append((i, s.model_copy(update={"bbox": to_original(s.bbox, t["box_original_px"])})))
     return detections, meta["tiles"], meta["width"], meta["height"]
@@ -136,87 +148,6 @@ def whole_symbols(model, image, width, height):
     result = model.with_structured_output(TileSymbols).invoke([msg])
     box = [0, 0, width, height]
     return [s.model_copy(update={"bbox": to_original(s.bbox, box)}) for s in result.symbols if len(s.bbox) == 4]
-
-
-class Pipe(BaseModel):
-    ids: list[str]
-    kind: Literal["process", "signal"]
-    line: str | None
-
-
-class Pipes(BaseModel):
-    pipes: list[Pipe]
-
-
-PIPE_PROMPT = """Image 1 is the whole P&ID. The other images are overlapping crops of it, in reading order.
-Every symbol has a red id label. Follow every line on the drawing and report the ids it joins.
-A line ends at any symbol it reaches, so an inline valve splits a pipe: A - valve - B is two pipes [A, valve] and
-[valve, B]. A tee joins all its branches into one pipe [A, B, C]. Lines that cross without a dot are separate.
-kind is signal for dashed or instrument lines, else process. line is the line-number label printed along the
-pipe, copied exactly, or null if none. Use only ids that appear in the images. Report each pipe once, even if it
-shows in several crops."""
-
-
-def image_block(path):
-    return {
-        "type": "image_url",
-        "image_url": {"url": "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode()},
-    }
-
-
-MORE_PROMPT = (
-    PIPE_PROMPT
-    + """
-
-These pipes were already found, each written as the ids it joins: {found}.
-Symbols with no pipe yet: {alone}.
-List only the pipes that are still missing: a drawn line that joins symbols the pipes above do not already join.
-If nothing is missing, return an empty list."""
-)
-
-
-def oneshot_graph(model, tiles_dir, base, rounds, work):
-    """Pass 2 in one call that sees the marked overview and every marked tile, then up to `rounds` follow-up
-    calls that show the pipes found so far and ask only for the missing ones. Each round's graph is saved too."""
-    meta = json.loads((tiles_dir / "tiles.json").read_text())
-    images = [image_block(tiles_dir / "marked_overview.png")]
-    images += [image_block(tiles_dir / f"marked_{t['file']}") for t in meta["tiles"]]
-    structured = model.with_structured_output(Pipes)
-
-    def ask(prompt):
-        return structured.invoke([HumanMessage(content=[{"type": "text", "text": prompt}, *images])]).pipes
-
-    pipes = ask(PIPE_PROMPT)
-    for k in range(rounds + 1):
-        graph = copy.deepcopy(base)
-        add_edges(graph, pipes)
-        (work / f"graph_round{k}.json").write_text(json.dumps(graph))
-        if k == rounds:
-            return graph
-        linked = {i for e in graph["edges"] for i in (e["source"], e["target"])}
-        alone = [n["id"] for n in graph["nodes"] if n["type"] != "junction" and n["id"] not in linked]
-        found = "; ".join("-".join(p.ids) for p in pipes)
-        pipes += ask(MORE_PROMPT.format(found=found, alone=", ".join(alone) or "none"))
-
-
-def add_edges(graph, pipes):
-    """Two ids on a pipe: one edge. Three or more (a tee): a junction node joined to each id."""
-    boxes = {n["id"]: n["bbox"] for n in graph["nodes"]}
-    seen = set()
-    for pipe in pipes:
-        members = tuple(sorted({i for i in pipe.ids if i in boxes}))
-        if len(members) < 2 or (members, pipe.kind) in seen:
-            continue
-        seen.add((members, pipe.kind))
-        attrs = {"kind": pipe.kind, **({"line": pipe.line} if pipe.line else {})}
-        if len(members) == 2:
-            graph["edges"].append({"source": members[0], "target": members[1], **attrs})
-            continue
-        cx = sum((boxes[m][0] + boxes[m][2]) / 2 for m in members) / len(members)
-        cy = sum((boxes[m][1] + boxes[m][3]) / 2 for m in members) / len(members)
-        jid = f"j{sum(n['type'] == 'junction' for n in graph['nodes']) + 1}"
-        graph["nodes"].append({"id": jid, "type": "junction", "tag": None, "bbox": [cx - 3, cy - 3, cx + 3, cy + 3]})
-        graph["edges"] += [{"source": m, "target": jid, **attrs} for m in members]
 
 
 def tokens(handler):
@@ -287,14 +218,7 @@ def main():
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--tiled", action="store_true", help="code runs pass 1 (symbols) tile by tile")
     mode.add_argument("--whole", action="store_true", help="code runs pass 1 in one call on the whole sheet")
-    ap.add_argument("--pipes", choices=["agent", "oneshot"], default="agent", help="pass 2: a Deep Agent, or one call")
-    ap.add_argument(
-        "--rounds", type=int, default=0, help="with --pipes oneshot: follow-up calls asking for missing pipes"
-    )
-    ap.add_argument("--pipe-model", help="model for the agent: connections, validate, export (default: --model)")
     args = ap.parse_args()
-    if args.pipes == "oneshot" and not (args.tiled or args.whole):
-        ap.error("--pipes oneshot needs --tiled or --whole")
 
     work = Path(args.workdir).resolve()
     drawing = next(work.glob("drawing.*"))
@@ -318,35 +242,20 @@ def main():
         (work / "graph.json").write_text(json.dumps(graph, indent=2))
         print(f"pass 1: {len(symbols)} detections -> {len(nodes)} symbols")
         pass1 = tokens(usage)
-        if args.pipe_model:
-            model = _ChatOpenAICodex(model=args.pipe_model, callbacks=[usage], **reasoning)
-        if args.pipes == "oneshot":
+        for script, extra in (("connect.py", [drawing]), ("validate.py", []), ("export.py", [work / "out"])):
+            # a failing validation is reported, not fatal: the graph is still scored and exported
             subprocess.run(
-                [sys.executable, skill / "scripts" / "mark.py", work / "graph.json", work / "tiles"], check=True
+                [sys.executable, skill / "scripts" / script, work / "graph.json", *extra], check=script != "validate.py"
             )
-            graph = oneshot_graph(model, work / "tiles", graph, args.rounds, work)
-            (work / "graph.json").write_text(json.dumps(graph, indent=2))
-            print(f"pass 2: {len(graph['edges'])} edges")
-            subprocess.run([sys.executable, skill / "scripts" / "validate.py", work / "graph.json"], check=False)
-            subprocess.run(
-                [sys.executable, skill / "scripts" / "export.py", work / "graph.json", work / "out"], check=True
-            )
-        tile_count = len(json.loads((work / "tiles" / "tiles.json").read_text())["tiles"])
-        task = (
-            f"Use the pid-parser skill (SKILL_DIR is {skill}) on the P&ID at {drawing}. Work directory: {work}. "
-            f"Steps 1-2 are done: {work}/tiles has the tiles and {work}/graph.json lists the symbols. "
-            f"Do steps 3, 5 and 6: mark the ids, then read all {tile_count} marked tiles one by one and write every "
-            f"pipe to pipes.txt, build the edges, validate and fix, then export to {work}/out. "
-            "Do not stop before every tile has been read."
-        )
     else:
+        pass1 = None
         task = (
             f"Use the pid-parser skill (SKILL_DIR is {skill}) to parse the P&ID at {drawing}. "
             f"Use {work} as the work directory: graph.json goes there and the export goes to {work}/out."
         )
 
     messages = []
-    if args.pipes == "agent":
+    if not (args.tiled or args.whole):
         agent = create_deep_agent(
             model=model,
             system_prompt=SYSTEM,
@@ -370,8 +279,8 @@ def main():
             messages.append(
                 {
                     "role": "user",
-                    "content": f"validate.py still fails:\n{problem}\nContinue with the tiles you have not read "
-                    "yet, then build the edges, validate and export again.",
+                    "content": f"validate.py still fails:\n{problem}\nFix it, run connect.py again if you changed "
+                    "the symbols, then validate and export again.",
                 }
             )
     elapsed = time.time() - start
@@ -382,16 +291,13 @@ def main():
         "effort": args.effort,
         "tiled": args.tiled,
         "whole": args.whole,
-        "pipes": args.pipes,
-        "rounds": args.rounds if args.pipes == "oneshot" else None,
-        "pipe_model": args.pipe_model,
         "harness": "deepagents",
         "seconds": round(elapsed),
         "tool_calls": sum(len(getattr(m, "tool_calls", None) or []) for m in messages),
         "input_tokens": total["input"],  # every model call, pass 1 included
         "cached_tokens": total["cached"],
         "output_tokens": total["output"],
-        "pass1_input_tokens": pass1["input"] if args.tiled or args.whole else None,
+        "pass1_input_tokens": pass1["input"] if pass1 else None,
     }
     (work / "run.json").write_text(json.dumps(meta, indent=2))
     print(messages[-1].text if messages else "done")
