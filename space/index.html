@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pid-parser showcase</title>
-<meta name="description" content="P&ID image to tables and graph with a vision-language model for the symbols and pixels for the connections: precomputed results on synthetic PID2Graph sheets.">
+<meta name="description" content="P&ID image to tables and graph with a vision-language model for the symbols and pixels for the connections: precomputed results on one very dense PID2Graph sheet.">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
 <style>
 :root {
@@ -56,7 +56,7 @@ footer { margin-top: 28px; font-size: 13px; color: var(--muted); }
   <h1>pid-parser</h1>
   <p class="muted">A P&amp;ID image in, tables and a graph out. A vision-language model finds the symbols tile by tile; the connections are read from the pixels (no model); small scripts check the graph and export it for SQL or a graph database. No GPU, no training.</p>
   <pre>npx skills add dzakybd/pid-parser</pre>
-  <p class="muted" style="margin-top:8px">Works in Claude Code, Codex and other skill-aware agents, or as a LangChain Deep Agent. Source: <a href="https://github.com/dzakybd/pid-parser">github.com/dzakybd/pid-parser</a>. How it works, step by step: <a href="https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph">the write-up</a>. These results were computed ahead of time; this page calls no model.</p>
+  <p class="muted" style="margin-top:8px">Works in Claude Code, Codex and other skill-aware agents, or as a LangChain Deep Agent. Source: <a href="https://github.com/dzakybd/pid-parser">github.com/dzakybd/pid-parser</a>. How it works, step by step: <a href="https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph">the write-up</a>. The sheet is one very dense P&amp;ID (190 symbols, 732 connected symbol pairs); the two tabs are two runs on it. These results were computed ahead of time; this page calls no model.</p>
 
   <div class="tabs" id="tabs" role="group" aria-label="Sheet"></div>
   <div class="stats" id="stats"></div>
@@ -97,7 +97,7 @@ cypher-shell -f graph.cypher       # Neo4j</pre>
   </section>
 
   <footer>
-    <p>Drawings: synthetic sheets from <a href="https://zenodo.org/records/14803338">PID2Graph</a> (<a href="https://arxiv.org/abs/2411.13929">paper</a>), CC BY-SA 4.0. The drawings and the outputs derived from them on this page are shared under CC BY-SA 4.0. Code: MIT.</p>
+    <p>Drawing: sheet 269 of the &ldquo;Dataset PID&rdquo; part of <a href="https://zenodo.org/records/14803338">PID2Graph</a> (<a href="https://arxiv.org/abs/2411.13929">paper</a>), CC BY-SA 4.0. The drawings and the outputs derived from them on this page are shared under CC BY-SA 4.0. Code: MIT.</p>
     <p>Scores compare against the PID2Graph ground truth. Symbols: one-to-one match by box center. Connections: symbol pairs on the same pipe network.</p>
   </footer>
 </main>
@@ -184,7 +184,7 @@ async function show(i) {
     [pct(sc.symbols.f1), `symbol F1 (${sc.symbols.matched}/${sc.symbols.gt} found)`],
     [pct(sc.connections.f1), `connection F1 (P ${pct(sc.connections.precision)}, R ${pct(sc.connections.recall)})`],
     [graph.nodes.length + " / " + graph.edges.length, "nodes / edges"],
-    [sheet.seconds + " s", `${sheet.model}, effort ${sheet.effort}`],
+    [sheet.seconds + " s", `${sheet.model}${sheet.effort ? ", effort " + sheet.effort : ""}`],
   ].map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
   drawSvg(sheet, graph);
   drawGraph(graph);

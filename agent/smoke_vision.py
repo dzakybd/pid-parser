@@ -7,7 +7,7 @@ from pathlib import Path
 from langchain_core.messages import HumanMessage
 from langchain_openai.chat_models.codex import _ChatOpenAICodex
 
-image = Path(sys.argv[1] if len(sys.argv) > 1 else "samples/open100-0.png")
+image = Path(sys.argv[1] if len(sys.argv) > 1 else "samples/dpid-269.png")
 b64 = base64.b64encode(image.read_bytes()).decode()
 mime = "image/png" if image.suffix == ".png" else "image/jpeg"
 

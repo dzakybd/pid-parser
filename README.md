@@ -8,7 +8,7 @@ The repo has three parts:
 - `agent/run.py`: the same skill run by a LangChain Deep Agent on a ChatGPT sign-in (no API key)
 - `eval/`: scoring against the PID2Graph ground truth on a handful of sheets
 
-See it on three sample sheets, no install needed: [huggingface.co/spaces/dzakybd/pid-parser](https://huggingface.co/spaces/dzakybd/pid-parser). The write-up, step by step: [dzaky.ai.id/en/blog/pid-parser-pid-to-graph](https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph) ([Bahasa Indonesia](https://dzaky.ai.id/id/blog/pid-parser-pid-to-graph)).
+See the dense sample sheet converted (Sonnet 5.5 skill and gpt-6-luna Deep Agents runs), no install needed: [huggingface.co/spaces/dzakybd/pid-parser](https://huggingface.co/spaces/dzakybd/pid-parser). The write-up, step by step: [dzaky.ai.id/en/blog/pid-parser-pid-to-graph](https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph) ([Bahasa Indonesia](https://dzaky.ai.id/id/blog/pid-parser-pid-to-graph)).
 
 ## Install the skill
 
@@ -58,20 +58,20 @@ uv sync
 uv run python -c "from langchain_openai.chatgpt_oauth import login_chatgpt; login_chatgpt()"   # once
 
 mkdir -p work/skills && cp -R skills/pid-parser work/skills/ && cp drawing.png work/
-uv run python agent/run.py work --model gpt-6.1-sol --effort low --tiled
+uv run python agent/run.py work --model gpt-6-luna --effort low --tiled
 ```
 
-This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile, then runs `connect.py`, `validate.py` and `export.py`: no agent loop, one model call per tile. Low and medium effort scored the same within noise; low took about 30% less time. `--whole` does pass 1 in one call on the whole sheet instead (see Results). Without either flag, one Deep Agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
+This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile, then runs `connect.py`, `validate.py` and `export.py`: no agent loop, one model call per tile. `--whole` does pass 1 in one call on the whole sheet instead (see Results). Without either flag, one Deep Agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
 
 Tested with Python 3.12, deepagents 0.7.25, langchain-openai 1.7.2, langchain-core 1.6.10, langgraph 1.2.15.
 
 ## Evaluation
 
 ```bash
-uv run python eval/fetch_samples.py            # 3 OPEN100 + 3 synthetic sheets, a few MB via HTTP range requests
-(cd eval && uv run python test_score.py ../samples/open100-1.graphml 2288 1528)  # scorer sanity checks: GT, width, height
-TILED=1 EFFORT=low eval/run_one.sh deepagents gpt-6.1-sol open100-1 1
-uv run python eval/summary.py                  # runs/results.csv
+uv run python eval/fetch_samples.py            # the six densest PID2Graph "Dataset PID" sheets, via HTTP range requests
+(cd eval && uv run python test_score.py ../samples/dpid-269.graphml 7168 4562)  # scorer sanity checks: GT, width, height
+python eval/test_connect.py                    # connect.py on a drawn image
+TILED=1 EFFORT=low eval/run_one.sh deepagents gpt-6-luna dpid-269 1
 ```
 
 Scoring needs no model, only the ground truth:
@@ -81,11 +81,9 @@ Scoring needs no model, only the ground truth:
 
 PID2Graph has no tag text, so tag accuracy is not scored.
 
-### Results
+### Results: one very dense sheet
 
-#### One very dense sheet: whole image vs this pipeline
-
-`dpid-269` (PID2Graph "Dataset PID"): 190 symbols and 732 symbol pairs on one sheet, the densest of the benchmark. "Whole" is one model call on the whole image that returns the graph (`eval/whole_baseline.py`). "Ours" is tiles for the symbols, then `connect.py` for the connections. Same scorer, no model in the scoring. The skill runs on Claude Sonnet 5.5, the Deep Agents runner on gpt-6-luna (low effort).
+The sheet is `dpid-269` (PID2Graph "Dataset PID"): 190 symbols and 732 connected symbol pairs, the densest of the benchmark. "Whole" is one model call on the whole image that returns the graph (`eval/whole_baseline.py`). "Ours" is tiles for the symbols, then `connect.py` for the connections. Same scorer, no model in the scoring. The skill runs on Claude Sonnet 5.5, the Deep Agents runner on gpt-6-luna (low effort).
 
 | Harness / model | Approach | Symbol F1 | Connection F1 | Time | Cost |
 |---|---|---|---|---|---|
@@ -94,48 +92,30 @@ PID2Graph has no tag text, so tag accuracy is not scored.
 | Deep Agents, gpt-6-luna | whole image | 0.34 | 0.08 | 20 s | 12K tokens |
 | Deep Agents, gpt-6-luna | tiles + agent reads pipes | 0.88 | 0.20 | 2.3 min | 480K tokens |
 | Deep Agents, gpt-6-luna | tiles + one call per tile reads pipes | 0.76 | 0.22 | 48 s | 49K tokens |
-| Deep Agents, gpt-6-luna | **tiles + `connect.py`** (3 runs) | 0.81-0.89 | **0.54-0.77** (mean 0.66) | 35 s | 25K tokens |
+| Deep Agents, gpt-6-luna | **tiles + `connect.py`**, best of 3 | 0.89 | **0.77** | 35 s | 25K tokens |
 
-Single runs for Sonnet, three for luna; luna's symbol pass varies from run to run and the connection score follows it. With the true symbol boxes, `connect.py` alone scores 0.98 connection F1 on this sheet (`eval/cv_connect.py`), so the remaining gap is symbol quality, not the line reading.
+Sonnet ran once, luna three times: its symbol pass varies from run to run (symbol F1 0.81-0.89) and the connection score follows it (0.54, 0.68 and 0.77). With the true symbol boxes, `connect.py` alone scores 0.98 connection F1 on this sheet (`eval/cv_connect.py`), so the remaining gap is symbol quality, not the line reading.
 
-It does not win everywhere. On the simple OPEN100 and synthetic sheets, the earlier gpt-6.1-sol agent that read the pipes scored as well or better (0.84 / 0.75 / 1.0 / 0.81 connection F1 on `open100-0`, `open100-1`, `synth-1`, `synth-2`, against 0.78 / 0.74 / 0.77 / 0.58 for `connect.py` on the same symbols), at about ten times the tokens. Real scans and dashed signal lines are where reading pixels loses.
+Tiles or the whole sheet for pass 1, symbol F1 with Sonnet 5.5 on three more dense sheets (`eval/compare_tiling.py`, `runs/tiling_compare.json`):
 
-#### Earlier runs: a model reads the pipes (previous version of the skill)
-
-One run per sheet, so differences under about 0.15 are noise.
-
-| Setup | Sheets | Symbol F1 | Connection F1 | Avg time |
+| Sheet | Symbols | Whole sheet, 1 call | Tiles, 12 calls | Tiles with ownership stitching |
 |---|---|---|---|---|
-| **Deep Agents, gpt-6.1-sol tiled (low)** | OPEN100 ×2 | **0.91** | **0.80** | 3.5 min |
-| Deep Agents, gpt-6.1-sol tiled (medium) | OPEN100 ×2 | 0.92 | 0.81 | 4.5 min |
-| Claude Code, Opus | OPEN100 ×3 | 0.78 | 0.59 | 3 min |
-| Codex, gpt-6-sol | OPEN100 ×3 | 0.73 | 0.49 | 3 min |
-| Deep Agents, gpt-6-sol | OPEN100 ×3 | 0.76 | 0.30 | 5 min |
-| Deep Agents, luna symbols (tiled) + sol agent | OPEN100 ×2 | 0.85 | 0.54 | 8 min |
-| Deep Agents, gpt-6-luna (medium) | OPEN100 ×1 | 0.33 | 0.08 | 1 min |
-| **Deep Agents, gpt-6.1-sol tiled (low)** | Synthetic ×3 | **0.99** | **0.83** | 4.5 min |
-| Claude Code, Opus | Synthetic ×3 | 0.99 | 0.85 | 3 min |
-| Codex, gpt-6-sol | Synthetic ×3 | 0.96 | 0.65 | 2.5 min |
-| Deep Agents, gpt-6-sol | Synthetic ×3 | 0.98 | 0.79 | 9 min |
+| dpid-36 | 183 | 0.60 | 0.96 | not run |
+| dpid-126 | 177 | 0.86 | 0.96 | 0.98 |
+| dpid-156 | 181 | 0.84 | 0.96 | 0.99 |
 
-The gpt-6.1-sol runs used only `open100-0` and `open100-1` of the OPEN100 sheets, so compare them with care. With the older models, the dense `open100-0` was the hard case (0.26 connection F1 with luna + sol); gpt-6.1-sol scored 0.84 on it at low effort.
-
-Tiles or the whole sheet for pass 1 (gpt-6.1-sol, low effort, one run per sheet; `eval/compare_tiling.py`, `runs/tiling_compare.json`):
-
-- Symbol pass alone: one whole-sheet call beat tiles on all six sheets (real sheets 0.95-0.97 vs 0.91 symbol F1). Recall was the same; the tile overlaps cost precision.
-- Full pipeline: no gain. Connection F1 0.61 vs 0.75 (`open100-1`) and 0.85 vs 0.84 (`open100-0`) for whole vs tiled; the pipe agent revises the symbol list either way.
-- An agent running the whole skill alone (no code-driven pass 1) scored 0.37 connection F1 on `open100-0` vs 0.84 with `--tiled`.
-- `--tiled` stays the default: the pipe pass uses the marked tiles, 7000x4500 sheets exceed the API's image limit in one call, and smaller models need tiles (gpt-6-luna symbol F1 0.33 → 0.81).
+Ownership stitching keeps a detection only from the tile whose center is nearest to it, which removes the duplicates that overlapping tiles produce. `--tiled` uses it.
 
 Tried and dropped:
 
-- Having a model read the connections (the version of the skill that produced the table below): a Deep Agent, one big call, or one call per tile. All lost to `connect.py` on the dense sheet. Reading connections tile by tile, including carrying pipe ends from one tile to the next. It peaked at 0.44 F1 and errors compounded across tiles.
+- Having a model read the connections: a Deep Agent, one big call with every tile, a follow-up call for the missing pipes, one call per tile. The pipes it wrote were precise but too few (a header joining 17 symbols came back as 25 fragments), and all scored 0.22 or less with luna.
+- Reading connections tile by tile and carrying pipe ends from one tile to the next. Errors compounded across tiles.
 - Joining pipe pieces by their line-number label. Line numbers run through inline valves, so this over-merges.
-- A first OpenCV line tracer, fragile once the symbol boxes were not exact. The version in `connect.py` is simpler (connected components after erasing the boxes) and is now the default; it is still only as good as the boxes.
+
+Limits: `connect.py` needs exact boxes and clean lines, loses dashed signal lines (so there are no `signal` edges), and was scored on this one sheet. I did not measure small or scanned sheets.
 
 ## Data and licences
 
-- **PID2Graph:** [Zenodo 14803338](https://zenodo.org/records/14803338), CC BY-SA 4.0 (paper: [arXiv 2411.13929](https://arxiv.org/abs/2411.13929)).
-- **OPEN100 sheets:** from the Energy Impact Center ([open-100.com](https://open-100.com)), with no licence stated. They are not redistributed here: `fetch_samples.py` downloads them, and `samples/` and run outputs stay out of git.
+- **PID2Graph:** [Zenodo 14803338](https://zenodo.org/records/14803338), CC BY-SA 4.0 (paper: [arXiv 2411.13929](https://arxiv.org/abs/2411.13929)). The sheets here come from its "Dataset PID" part (Digitize-PID, Paliwal et al.), also CC BY-SA 4.0. `fetch_samples.py` downloads them; `samples/` and run outputs stay out of git, and the showcase Space ships one sheet and its outputs under CC BY-SA 4.0.
 
 Code in this repo is MIT licensed (see `LICENSE`). The datasets above keep their own terms.

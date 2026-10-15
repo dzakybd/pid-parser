@@ -7,6 +7,5 @@ runs/**/overlay.png
 runs/_pilot/
 .env
 runs/*
-!runs/results.csv
 space/data/
 !runs/tiling_compare.json

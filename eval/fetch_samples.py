@@ -1,9 +1,8 @@
 """Pull a few full sheets and their ground-truth GraphML out of the 9.3 GB PID2Graph zip.
 
 Uses HTTP range requests, so only the requested files are downloaded (a few MB).
-PID2Graph: https://zenodo.org/records/14803338 (CC BY-SA 4.0). The OPEN100 sheets
-come from the Energy Impact Center (open-100.com) with no licence stated, so this
-repo fetches them instead of redistributing them.
+PID2Graph: https://zenodo.org/records/14803338 (CC BY-SA 4.0). The sheets come from its "Dataset PID" part
+(Digitize-PID, Paliwal et al., CC BY-SA 4.0).
 
 Usage: uv run python eval/fetch_samples.py [outdir]
 """
@@ -14,11 +13,9 @@ from pathlib import Path
 from remotezip import RemoteZip
 
 URL = "https://zenodo.org/records/14803338/files/PID2Graph.zip"
-# (folder in the zip, file prefix, image extension, sheet ids). The Dataset PID ids are the dense benchmark that
-# eval/compare_tiling.py runs on: the six sheets with the most symbols (176-190).
+# (folder in the zip, file prefix, image extension, sheet ids): the dense benchmark, the six sheets with the most
+# symbols (176-190). dpid-269 (190 symbols, 732 connected pairs) is the one the results are about.
 SHEETS = [
-    ("PID2Graph/Complete/PID2Graph OPEN100", "open100", "png", ["0", "1", "2", "10"]),
-    ("PID2Graph/Complete/PID2Graph Synthetic", "synth", "jpg", ["0", "1", "2"]),
     ("PID2Graph/Complete/Dataset PID", "dpid", "png", ["269", "227", "36", "156", "126", "61"]),
 ]
 

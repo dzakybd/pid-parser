@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run one harness on one sheet in an isolated folder that holds only the drawing and the skill.
-# Usage: eval/run_one.sh <harness: claude|codex|deepagents> <model> <sheet, e.g. open100-1> <repeat>
+# Usage: eval/run_one.sh <harness: claude|codex|deepagents> <model> <sheet, e.g. dpid-269> <repeat>
 # EFFORT=medium sets the Deep Agents reasoning effort; TILED=1 or WHOLE=1 runs pass 1 in code (per tile or one whole-sheet call). Connections are always computed from the pixels (connect.py).
 set -euo pipefail
 

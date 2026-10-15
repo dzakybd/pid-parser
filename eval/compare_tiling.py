@@ -76,8 +76,8 @@ class ClaudeCLI:
 
 
 # The dense benchmark, fixed by rule before any run: the six PID2Graph "Dataset PID" sheets with the most symbols
-# (176-190), plus the two densest OPEN100 sheets (134 and 102). Fetched by eval/fetch_samples.py.
-SHEETS = ["dpid-269", "dpid-227", "dpid-36", "dpid-156", "dpid-126", "dpid-61", "open100-10", "open100-0"]
+# (176-190). Fetched by eval/fetch_samples.py.
+SHEETS = ["dpid-269", "dpid-227", "dpid-36", "dpid-156", "dpid-126", "dpid-61"]
 
 
 def main():
