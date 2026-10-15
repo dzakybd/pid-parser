@@ -14,7 +14,7 @@ Usage: score.py <graph.json> <gt.graphml> [--overlay <image> <out.png>]
 import json
 import math
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from nets import box_center, load_gt, load_pred
@@ -43,6 +43,32 @@ def match(pred, gt):
             m[a] = b
             used.add(b)
     return m
+
+
+def symbol_f1(m, pr_pairs, gt_pairs):
+    """Macro average over matched symbols of the F1 between a symbol's predicted and true neighbours.
+
+    Pair F1 counts every connected pair, so one header joining 20 symbols weighs 190 pairs. Here the same
+    header weighs 20 symbols, which keeps a few big networks from deciding the score on a dense sheet."""
+    pred = defaultdict(set)
+    for pair in pr_pairs:
+        a, b = tuple(pair)
+        if a in m and b in m:
+            pred[m[a]].add(m[b])
+            pred[m[b]].add(m[a])
+    true = defaultdict(set)
+    for pair in gt_pairs:
+        a, b = tuple(pair)
+        true[a].add(b)
+        true[b].add(a)
+    scores = []
+    for g in set(m.values()):
+        t, p = true[g], pred[g]
+        if not t and not p:
+            continue
+        hit = len(t & p)
+        scores.append(f1(hit / len(p) if p else 0.0, hit / len(t) if t else 0.0))
+    return sum(scores) / len(scores) if scores else 0.0
 
 
 def score(graph, gt_path):
@@ -80,6 +106,7 @@ def score(graph, gt_path):
             "precision": cp,
             "recall": cr,
             "f1": f1(cp, cr),
+            "symbol_f1": symbol_f1(m, pr_pairs, gt_pairs),
         },
         "missed_by_class": dict(missed),
     }, (pr_sym, gt_sym, m, graph)

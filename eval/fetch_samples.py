@@ -14,16 +14,21 @@ from pathlib import Path
 from remotezip import RemoteZip
 
 URL = "https://zenodo.org/records/14803338/files/PID2Graph.zip"
-SHEETS = [("PID2Graph OPEN100", "open100", "png"), ("PID2Graph Synthetic", "synth", "jpg")]
-IDS = ["0", "1", "2"]
+# (folder in the zip, file prefix, image extension, sheet ids). The Dataset PID ids are the dense benchmark that
+# eval/compare_tiling.py runs on: the six sheets with the most symbols (176-190).
+SHEETS = [
+    ("PID2Graph/Complete/PID2Graph OPEN100", "open100", "png", ["0", "1", "2", "10"]),
+    ("PID2Graph/Complete/PID2Graph Synthetic", "synth", "jpg", ["0", "1", "2"]),
+    ("PID2Graph/Complete/Dataset PID", "dpid", "png", ["269", "227", "36", "156", "126", "61"]),
+]
 
 out = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent / "samples")
 out.mkdir(parents=True, exist_ok=True)
 with RemoteZip(URL) as z:
-    for folder, prefix, ext in SHEETS:
-        for i in IDS:
+    for folder, prefix, ext, ids in SHEETS:
+        for i in ids:
             for suffix in ("graphml", ext):
                 target = out / f"{prefix}-{i}.{suffix}"
                 if not target.exists():
-                    target.write_bytes(z.read(f"PID2Graph/Complete/{folder}/{i}.{suffix}"))
+                    target.write_bytes(z.read(f"{folder}/{i}.{suffix}"))
                 print(target)

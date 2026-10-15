@@ -54,7 +54,7 @@ gt, w, h = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
 perfect = perfect_graph(gt, w, h)
 r, _ = score(perfect, gt)
 print("perfect", r["symbols"]["f1"], r["symbols"]["class_accuracy"], r["connections"]["f1"])
-assert r["symbols"]["f1"] == 1.0 and r["connections"]["f1"] == 1.0
+assert r["symbols"]["f1"] == 1.0 and r["connections"]["f1"] == 1.0 and r["connections"]["symbol_f1"] == 1.0
 
 symbols = [n for n in perfect["nodes"] if n["type"] != "junction"]
 keep = [n for n in perfect["nodes"] if n["type"] == "junction"] + [n for i, n in enumerate(symbols) if i % 5]
