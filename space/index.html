@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pid-parser showcase</title>
-<meta name="description" content="P&ID image to tables and graph with a vision-language model: precomputed results on synthetic PID2Graph sheets.">
+<meta name="description" content="P&ID image to tables and graph with a vision-language model for the symbols and pixels for the connections: precomputed results on synthetic PID2Graph sheets.">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
 <style>
 :root {
@@ -54,7 +54,7 @@ footer { margin-top: 28px; font-size: 13px; color: var(--muted); }
 <body>
 <main>
   <h1>pid-parser</h1>
-  <p class="muted">A P&amp;ID image in, tables and a graph out. A vision-language model reads the drawing; small scripts tile it, check the graph and export it for SQL or a graph database. No GPU, no training.</p>
+  <p class="muted">A P&amp;ID image in, tables and a graph out. A vision-language model finds the symbols tile by tile; the connections are read from the pixels (no model); small scripts check the graph and export it for SQL or a graph database. No GPU, no training.</p>
   <pre>npx skills add dzakybd/pid-parser</pre>
   <p class="muted" style="margin-top:8px">Works in Claude Code, Codex and other skill-aware agents, or as a LangChain Deep Agent. Source: <a href="https://github.com/dzakybd/pid-parser">github.com/dzakybd/pid-parser</a>. How it works, step by step: <a href="https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph">the write-up</a>. These results were computed ahead of time; this page calls no model.</p>
 
@@ -69,7 +69,7 @@ footer { margin-top: 28px; font-size: 13px; color: var(--muted); }
         <label><input type="checkbox" id="showEdge" checked> connections</label>
       </div>
       <svg id="drawing" role="img" aria-label="P&amp;ID drawing with detected symbols and connections"></svg>
-      <div class="legend"><span><i style="background:var(--sym)"></i>symbol box</span><span><i style="background:var(--process)"></i>process pipe</span><span><i style="background:var(--signal)"></i>signal line</span></div>
+      <div class="legend"><span><i style="background:var(--sym)"></i>symbol box</span><span><i style="background:var(--process)"></i>process pipe</span></div>
     </section>
     <section class="panel">
       <h2>Graph</h2>
@@ -184,7 +184,7 @@ async function show(i) {
     [pct(sc.symbols.f1), `symbol F1 (${sc.symbols.matched}/${sc.symbols.gt} found)`],
     [pct(sc.connections.f1), `connection F1 (P ${pct(sc.connections.precision)}, R ${pct(sc.connections.recall)})`],
     [graph.nodes.length + " / " + graph.edges.length, "nodes / edges"],
-    [Math.round(sheet.seconds / 60) + " min", `${sheet.model}, effort ${sheet.effort}`],
+    [sheet.seconds + " s", `${sheet.model}, effort ${sheet.effort}`],
   ].map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
   drawSvg(sheet, graph);
   drawGraph(graph);

@@ -6,12 +6,12 @@ colorTo: gray
 sdk: static
 pinned: false
 license: cc-by-sa-4.0
-short_description: P&ID image to tables and a graph with a vision LLM
+short_description: "P&ID image to tables and a graph, with pixel connections"
 ---
 
 # pid-parser showcase
 
-Precomputed results of [pid-parser](https://github.com/dzakybd/pid-parser) on three synthetic P&ID sheets: the drawing with what the model read, the graph, the tables, and the SQL, CSV, GraphML and Cypher exports. The page calls no model.
+Precomputed results of [pid-parser](https://github.com/dzakybd/pid-parser) on three synthetic P&ID sheets: the drawing with the symbols the model found, the connections read from the pixels, the graph, the tables, and the SQL, CSV, GraphML and Cypher exports. The page calls no model.
 
 Install the skill in your own agent with `npx skills add dzakybd/pid-parser`. How it works, step by step: [the write-up](https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph).
 
