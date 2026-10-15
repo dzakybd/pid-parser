@@ -1,6 +1,8 @@
 # pid-parser
 
-Turn a P&ID (piping and instrumentation diagram) image into a graph of components and pipe connections, ready for an RDBMS or a graph database. No GPU or training: a vision-language model finds the symbols, and small scripts do the tiling, the connections (read from the pixels), checking and export.
+Turn a P&ID (piping and instrumentation diagram) image into a graph of components and pipe connections, ready for an RDBMS or a graph database. No GPU or training: a vision-language model finds the symbols, and small scripts do the tiling, the connections (traditional computer vision: thresholding and connected-component labeling), checking and export.
+
+Useful for: asking the drawing questions (which valves sit between this pump and that tank), counting and listing components, checking what a valve isolates, loading the data into SQL, spreadsheets or Neo4j, giving an assistant a graph instead of a picture, and flagging isolated valves in a review. I tested the conversion on one dense sheet, not these workflows.
 
 The repo has three parts:
 
@@ -45,11 +47,11 @@ Node types: valve, control_valve, relief_valve, check_valve, pump, compressor, t
 
 1. `tile.py` cuts the sheet into overlapping tiles with a coordinate grid in original pixels.
 2. Pass 1: the model lists every symbol tile by tile, and duplicates from the overlaps are merged.
-3. Pass 2: `connect.py` reads the connections from the pixels, with no model. It erases the symbol boxes from the binarized drawing, labels the line pieces that are left, and links the symbols that touch the same piece. A network that reaches three or more symbols becomes a `junction`.
-4. `validate.py` checks the graph (ids, types, boxes, dangling edges, suspicious tags, isolated valves).
+3. Pass 2: `connect.py` finds the connections with traditional computer vision, no model and no learning. It binarizes the drawing (thresholding), erases the symbol boxes, labels the pieces of line that are left (connected-component labeling), and links the symbols that touch the same piece. A network that reaches three or more symbols becomes a `junction`.
+4. `validate.py` validates the graph's structure with plain rules (ids, types, boxes, dangling edges, suspicious tags, isolated valves). It only reports: in the skill the agent reviews the warnings, in the code-driven `--tiled` path they are printed.
 5. `export.py` writes the tables and graph files.
 
-The model only has to find symbols and boxes, which is local work that tiles handle well. The connections are the part a model did worst and slowest, and the pixels answer them: on the dense sheet below the connection F1 went from 0.20 (agent reading the pipes) to 0.66 on average, with 20x fewer tokens. The catch is that it depends on exact boxes and clean lines (see Results).
+The model only has to find symbols and boxes, which is local work that tiles handle well. The connections are the part a model did worst and slowest, and the pixels answer them: on the dense sheet below the connection F1 went from 0.20 (agent reading the pipes) to 0.77 (best of three luna runs), with 20x fewer tokens. The catch is that it depends on exact boxes and clean lines (see Results).
 
 ## Deep Agents runner (ChatGPT sign-in)
 
@@ -88,11 +90,11 @@ The sheet is `dpid-269` (PID2Graph "Dataset PID"): 190 symbols and 732 connected
 | Harness / model | Approach | Symbol F1 | Connection F1 | Time | Cost |
 |---|---|---|---|---|---|
 | Skill, Sonnet 5.5 | whole image | 0.84 | 0.29 | 1.4 min | $0.34 |
-| Skill, Sonnet 5.5 | **tiles + `connect.py`** | **0.99** | **0.96** | 3.2 min | $0.74 |
+| Skill, Sonnet 5.5 | **tiles + `connect.py` (traditional CV)** | **0.99** | **0.96** | 3.2 min | $0.74 |
 | Deep Agents, gpt-6-luna | whole image | 0.34 | 0.08 | 20 s | 12K tokens |
 | Deep Agents, gpt-6-luna | tiles + agent reads pipes | 0.88 | 0.20 | 2.3 min | 480K tokens |
 | Deep Agents, gpt-6-luna | tiles + one call per tile reads pipes | 0.76 | 0.22 | 48 s | 49K tokens |
-| Deep Agents, gpt-6-luna | **tiles + `connect.py`**, best of 3 | 0.89 | **0.77** | 35 s | 25K tokens |
+| Deep Agents, gpt-6-luna | **tiles + `connect.py` (traditional CV)**, best of 3 | 0.89 | **0.77** | 35 s | 25K tokens |
 
 Sonnet ran once, luna three times: its symbol pass varies from run to run (symbol F1 0.81-0.89) and the connection score follows it (0.54, 0.68 and 0.77). With the true symbol boxes, `connect.py` alone scores 0.98 connection F1 on this sheet (`eval/cv_connect.py`), so the remaining gap is symbol quality, not the line reading.
 

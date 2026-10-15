@@ -21,7 +21,7 @@ P&ID image -> graph.json -> CSV / SQL / GraphML / Cypher. Agent skill + Deep Age
 - `space/`: static Hugging Face Space, the dense sheet dpid-269 (PID2Graph Dataset PID, CC BY-SA 4.0).
 
 ## Project Learnings
-- Read connections from the pixels (`connect.py`), not with a model: agent, one-call and per-tile pipe passes all scored 0.20-0.22 on the dense sheet against 0.54-0.77 for pixels. The symbol pass sets the ceiling.
+- Read connections with traditional CV (`connect.py`: thresholding + connected-component labeling), not with a model: agent, one-call and per-tile pipe passes all scored 0.20-0.22 on the dense sheet against 0.54-0.77 for pixels. The symbol pass sets the ceiling.
 - Ask the model for crop-normalized 0-1000 boxes and convert in code; models misreport pixel coordinates.
 - Deep Agents `LocalShellBackend` needs `virtual_mode=False` and absolute paths in the task, or the agent cannot find the skill scripts.
 - Neo4j Cypher: use CREATE and omit null properties (MERGE fails on nulls).

@@ -32,7 +32,7 @@ Skip this pass if `<workdir>/graph.json` already lists the symbols (some pipelin
 uv run SKILL_DIR/scripts/connect.py <workdir>/graph.json <image>
 ```
 
-Do not trace pipes by eye. This script reads them from the pixels: it erases every symbol box from the binarized drawing, labels the line pieces that are left, and joins the symbols that touch the same piece. A pipe between two symbols becomes one edge; a network that reaches three or more symbols becomes a `junction` node with an edge to each. An inline valve is a symbol, so the line on each side of it is its own network. It rewrites every edge and junction, so run it again whenever you add, move or remove a symbol.
+Do not trace pipes by eye. This script uses traditional computer vision, no model: it binarizes the drawing (thresholding), erases every symbol box, labels the line pieces that are left (connected-component labeling), and joins the symbols that touch the same piece. A pipe between two symbols becomes one edge; a network that reaches three or more symbols becomes a `junction` node with an edge to each. An inline valve is a symbol, so the line on each side of it is its own network. It rewrites every edge and junction, so run it again whenever you add, move or remove a symbol.
 
 What it depends on is the symbol boxes: a box that is off by more than a few pixels touches the wrong line or none. Boxes come from pass 1, so take care there. A line it cannot see (a dashed signal line broken into short dashes, a line hidden behind text) shows up as a symbol with no connections in step 5; look at that spot on the tile and add the missing edge to `graph.json` by hand (format below).
 

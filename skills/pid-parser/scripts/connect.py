@@ -2,8 +2,8 @@
 # requires-python = ">=3.9"
 # dependencies = ["pillow", "numpy", "scipy"]
 # ///
-"""Connections from the drawing itself, no model: erase every symbol box from the binarized sheet, label what
-is left as line components, and join the symbols that touch the same component.
+"""Connections with traditional computer vision, no model: binarize the sheet (thresholding), erase every symbol
+box, label what is left with connected-component labeling, and join the symbols that touch the same component.
 
 A network that joins two symbols becomes one edge; one that joins three or more becomes a junction node with
 an edge to each symbol. An inline valve stays a symbol, so the line on each side of it is its own network.

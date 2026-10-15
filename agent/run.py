@@ -8,7 +8,7 @@ The workdir must contain the drawing (drawing.png or drawing.jpg) and skills/pid
 Without a flag the agent runs the whole skill: it reads the tiles for the symbols, then runs connect.py.
 
 --tiled: code runs pass 1 (symbols) tile by tile, one model call per tile, so no tile is skipped. Then code runs
-connect.py (the connections, from the pixels, no model), validate.py and export.py. No agent loop.
+connect.py (the connections, traditional computer vision, no model), validate.py and export.py. No agent loop.
 
 --whole: like --tiled, but pass 1 is one call on the whole sheet (downscaled to MAX_SIDE like tile.py).
 
