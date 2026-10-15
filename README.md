@@ -8,6 +8,8 @@ The repo has three parts:
 - `agent/run.py`: the same skill run by a LangChain Deep Agent on a ChatGPT sign-in (no API key)
 - `eval/`: scoring against the PID2Graph ground truth on a handful of sheets
 
+See it on three sample sheets, no install needed: [huggingface.co/spaces/dzakybd/pid-parser](https://huggingface.co/spaces/dzakybd/pid-parser).
+
 ## Install the skill
 
 ```bash
@@ -56,17 +58,17 @@ uv sync
 uv run python -c "from langchain_openai.chatgpt_oauth import login_chatgpt; login_chatgpt()"   # once
 
 mkdir -p work/skills && cp -R skills/pid-parser work/skills/ && cp drawing.png work/
-uv run python agent/run.py work --model gpt-6-luna --effort medium --tiled --pipe-model gpt-6-sol
+uv run python agent/run.py work --model gpt-6.1-sol --effort low --tiled
 ```
 
-This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile on the cheap model. A Deep Agent on `--pipe-model` then does the connections, validation and export. Without `--tiled`, one agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
+This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile. A Deep Agent then does the connections, validation and export, on `--pipe-model` if you want a different model for that part. Low and medium effort scored the same within noise; low is about 1.5x faster. Without `--tiled`, one agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
 
 ## Evaluation
 
 ```bash
 uv run python eval/fetch_samples.py            # 3 OPEN100 + 3 synthetic sheets, a few MB via HTTP range requests
 (cd eval && uv run python test_score.py ../samples/open100-1.graphml 2288 1528)  # scorer sanity checks: GT, width, height
-eval/run_one.sh deepagents gpt-6-luna open100-1 1   # EFFORT=medium TILED=1 PIPE_MODEL=gpt-6-sol
+TILED=1 EFFORT=low eval/run_one.sh deepagents gpt-6.1-sol open100-1 1
 uv run python eval/summary.py                  # runs/results.csv
 ```
 
@@ -83,16 +85,19 @@ One run per sheet, so differences under about 0.15 are noise.
 
 | Setup | Sheets | Symbol F1 | Connection F1 | Avg time |
 |---|---|---|---|---|
+| **Deep Agents, gpt-6.1-sol tiled (low)** | OPEN100 ×2 | **0.91** | **0.80** | 3.5 min |
+| Deep Agents, gpt-6.1-sol tiled (medium) | OPEN100 ×2 | 0.92 | 0.81 | 4.5 min |
 | Claude Code, Opus | OPEN100 ×3 | 0.78 | 0.59 | 3 min |
 | Codex, gpt-6-sol | OPEN100 ×3 | 0.73 | 0.49 | 3 min |
 | Deep Agents, gpt-6-sol | OPEN100 ×3 | 0.76 | 0.30 | 5 min |
 | Deep Agents, luna symbols (tiled) + sol agent | OPEN100 ×2 | 0.85 | 0.54 | 8 min |
 | Deep Agents, gpt-6-luna (medium) | OPEN100 ×1 | 0.33 | 0.08 | 1 min |
+| **Deep Agents, gpt-6.1-sol tiled (low)** | Synthetic ×3 | **0.99** | **0.83** | 4.5 min |
 | Claude Code, Opus | Synthetic ×3 | 0.99 | 0.85 | 3 min |
 | Codex, gpt-6-sol | Synthetic ×3 | 0.96 | 0.65 | 2.5 min |
 | Deep Agents, gpt-6-sol | Synthetic ×3 | 0.98 | 0.79 | 9 min |
 
-The tiled setup scored 0.81 connection F1 on `open100-1` and 0.26 on `open100-0`. On that dense sheet, most ground-truth pairs come from two long headers.
+The gpt-6.1-sol runs used only `open100-0` and `open100-1` of the OPEN100 sheets, so compare them with care. With the older models, the dense `open100-0` was the hard case (0.26 connection F1 with luna + sol); gpt-6.1-sol scored 0.84 on it at low effort.
 
 Tried and dropped:
 

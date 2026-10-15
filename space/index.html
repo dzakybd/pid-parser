@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pid-parser showcase</title>
+<meta name="description" content="P&ID image to tables and graph with a vision-language model: precomputed results on synthetic PID2Graph sheets.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --fg: #1d1d1b; --muted: #6b6b66; --line: #e2e2dc;
+  --accent: #0b6e69; --process: #0b6e69; --signal: #c2410c; --junction: #6b6b66; --sym: #1d4ed8;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #141413; --panel: #1d1d1b; --fg: #ecece6; --muted: #a3a39b; --line: #33332f;
+    --accent: #5eb8b2; --process: #5eb8b2; --signal: #fb923c; --junction: #a3a39b; --sym: #93b4ff; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 26px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 0 0 10px; }
+p { margin: 0 0 8px; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; margin: 8px 0 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.row { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-top: 16px; }
+@media (max-width: 860px) { .row { grid-template-columns: 1fr; } }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.tabs button, .toggles label { border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 999px; padding: 6px 14px; font: inherit; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.toggles label { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; padding: 4px 12px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 16px; }
+@media (max-width: 600px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.stat b { display: block; font-size: 22px; }
+.stat span { font-size: 12px; color: var(--muted); }
+#drawing { width: 100%; height: auto; display: block; background: #fff; border-radius: 6px; }
+#graph { width: 100%; height: 420px; }
+.legend { font-size: 12px; color: var(--muted); margin-top: 8px; display: flex; gap: 14px; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+.scroll { max-height: 320px; overflow: auto; }
+.files { display: flex; flex-wrap: wrap; gap: 8px; }
+.files a { border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; text-decoration: none; font-size: 13px; }
+footer { margin-top: 28px; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>pid-parser</h1>
+  <p class="muted">A P&amp;ID image in, tables and a graph out. A vision-language model reads the drawing; small scripts tile it, check the graph and export it for SQL or a graph database. No GPU, no training.</p>
+  <pre>npx skills add dzakybd/pid-parser</pre>
+  <p class="muted" style="margin-top:8px">Works in Claude Code, Codex and other skill-aware agents, or as a LangChain Deep Agent. Source: <a href="https://github.com/dzakybd/pid-parser">github.com/dzakybd/pid-parser</a>. These results were computed ahead of time; this page calls no model.</p>
+
+  <div class="tabs" id="tabs" role="group" aria-label="Sheet"></div>
+  <div class="stats" id="stats"></div>
+
+  <div class="row">
+    <section class="panel">
+      <h2>Drawing and what was read</h2>
+      <div class="toggles">
+        <label><input type="checkbox" id="showSym" checked> symbols</label>
+        <label><input type="checkbox" id="showEdge" checked> connections</label>
+      </div>
+      <svg id="drawing" role="img" aria-label="P&amp;ID drawing with detected symbols and connections"></svg>
+      <div class="legend"><span><i style="background:var(--sym)"></i>symbol box</span><span><i style="background:var(--process)"></i>process pipe</span><span><i style="background:var(--signal)"></i>signal line</span></div>
+    </section>
+    <section class="panel">
+      <h2>Graph</h2>
+      <div id="graph"></div>
+      <p class="muted" style="font-size:12px;margin-top:6px">Nodes sit where the symbols are on the sheet. Grey dots are junctions (tees).</p>
+    </section>
+  </div>
+
+  <div class="row">
+    <section class="panel">
+      <h2>components</h2>
+      <div class="scroll"><table id="nodes"></table></div>
+    </section>
+    <section class="panel">
+      <h2>connections</h2>
+      <div class="scroll"><table id="edges"></table></div>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:16px">
+    <h2>Download this sheet's output</h2>
+    <div class="files" id="files"></div>
+    <pre>sqlite3 pid.db &lt; pid.sql          # or: psql -f pid.sql
+cypher-shell -f graph.cypher       # Neo4j</pre>
+  </section>
+
+  <footer>
+    <p>Drawings: synthetic sheets from <a href="https://zenodo.org/records/14803338">PID2Graph</a> (<a href="https://arxiv.org/abs/2411.13929">paper</a>), CC BY-SA 4.0. The drawings and the outputs derived from them on this page are shared under CC BY-SA 4.0. Code: MIT.</p>
+    <p>Scores compare against the PID2Graph ground truth. Symbols: one-to-one match by box center. Connections: symbol pairs on the same pipe network.</p>
+  </footer>
+</main>
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const pct = v => (v * 100).toFixed(0) + "%";
+let sheets = [], cy = null;
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  parent.appendChild(e);
+  return e;
+}
+const center = b => [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+
+function drawSvg(sheet, graph) {
+  const svg = document.getElementById("drawing");
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox", `0 0 ${graph.image.width} ${graph.image.height}`);
+  el("image", { href: `data/${sheet.id}/drawing.jpg`, x: 0, y: 0, width: graph.image.width, height: graph.image.height }, svg);
+  const stroke = graph.image.width / 600;
+  const byId = Object.fromEntries(graph.nodes.map(n => [n.id, n]));
+  const edges = el("g", { id: "edgeLayer" }, svg);
+  for (const e of graph.edges) {
+    const [x1, y1] = center(byId[e.source].bbox), [x2, y2] = center(byId[e.target].bbox);
+    el("line", { x1, y1, x2, y2, stroke: e.kind === "signal" ? css("--signal") : css("--process"),
+      "stroke-width": stroke, "stroke-dasharray": e.kind === "signal" ? `${stroke * 3} ${stroke * 2}` : "", opacity: 0.8 }, edges);
+  }
+  const syms = el("g", { id: "symLayer" }, svg);
+  for (const n of graph.nodes) {
+    const [x1, y1, x2, y2] = n.bbox;
+    if (n.type === "junction") {
+      el("circle", { cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, r: stroke * 2.5, fill: css("--junction") }, syms);
+      continue;
+    }
+    const r = el("rect", { x: x1, y: y1, width: x2 - x1, height: y2 - y1, fill: "none", stroke: css("--sym"), "stroke-width": stroke }, syms);
+    el("title", {}, r).textContent = `${n.id} ${n.type}${n.tag ? " " + n.tag : ""}`;
+  }
+  applyToggles();
+}
+
+function applyToggles() {
+  const s = document.getElementById("symLayer"), e = document.getElementById("edgeLayer");
+  if (s) s.style.display = document.getElementById("showSym").checked ? "" : "none";
+  if (e) e.style.display = document.getElementById("showEdge").checked ? "" : "none";
+}
+
+function drawGraph(graph) {
+  const scale = 600 / graph.image.width;
+  if (cy) cy.destroy();
+  cy = cytoscape({
+    container: document.getElementById("graph"),
+    elements: [
+      ...graph.nodes.map(n => { const [x, y] = center(n.bbox);
+        return { data: { id: n.id, label: n.type === "junction" ? "" : (n.tag || n.type), j: n.type === "junction" }, position: { x: x * scale, y: y * scale } }; }),
+      ...graph.edges.map((e, i) => ({ data: { id: "e" + i, source: e.source, target: e.target, kind: e.kind } })),
+    ],
+    layout: { name: "preset", fit: true, padding: 16 },
+    style: [
+      { selector: "node", style: { "background-color": css("--sym"), width: 10, height: 10, label: "data(label)", "font-size": 7, color: css("--fg"), "text-valign": "top", "text-margin-y": -2 } },
+      { selector: "node[?j]", style: { "background-color": css("--junction"), width: 5, height: 5 } },
+      { selector: "edge", style: { width: 1.5, "line-color": css("--process"), "curve-style": "straight" } },
+      { selector: "edge[kind = 'signal']", style: { "line-color": css("--signal"), "line-style": "dashed" } },
+    ],
+  });
+}
+
+function fillTables(graph) {
+  const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+  document.getElementById("nodes").innerHTML = "<tr><th>id</th><th>type</th><th>tag</th></tr>" +
+    graph.nodes.map(n => `<tr><td>${esc(n.id)}</td><td>${esc(n.type)}</td><td>${esc(n.tag)}</td></tr>`).join("");
+  document.getElementById("edges").innerHTML = "<tr><th>source</th><th>target</th><th>kind</th><th>line</th></tr>" +
+    graph.edges.map(e => `<tr><td>${esc(e.source)}</td><td>${esc(e.target)}</td><td>${esc(e.kind)}</td><td>${esc(e.line)}</td></tr>`).join("");
+}
+
+async function show(i) {
+  const sheet = sheets[i];
+  document.querySelectorAll("#tabs button").forEach((b, j) => b.setAttribute("aria-pressed", String(i === j)));
+  const graph = await (await fetch(`data/${sheet.id}/graph.json`)).json();
+  const sc = sheet.score;
+  document.getElementById("stats").innerHTML = [
+    [pct(sc.symbols.f1), `symbol F1 (${sc.symbols.matched}/${sc.symbols.gt} found)`],
+    [pct(sc.connections.f1), `connection F1 (P ${pct(sc.connections.precision)}, R ${pct(sc.connections.recall)})`],
+    [graph.nodes.length + " / " + graph.edges.length, "nodes / edges"],
+    [Math.round(sheet.seconds / 60) + " min", `${sheet.model}, effort ${sheet.effort}`],
+  ].map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
+  drawSvg(sheet, graph);
+  drawGraph(graph);
+  fillTables(graph);
+  document.getElementById("files").innerHTML = ["graph.json", "out/pid.sql", "out/nodes.csv", "out/edges.csv", "out/graph.graphml", "out/graph.cypher"]
+    .map(f => `<a href="data/${sheet.id}/${f}" download>${f.replace("out/", "")}</a>`).join("");
+}
+
+document.getElementById("showSym").addEventListener("change", applyToggles);
+document.getElementById("showEdge").addEventListener("change", applyToggles);
+
+fetch("data/sheets.json").then(r => r.json()).then(list => {
+  sheets = list;
+  const tabs = document.getElementById("tabs");
+  list.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.textContent = s.title;
+    b.onclick = () => show(i);
+    tabs.appendChild(b);
+  });
+  show(0);
+});
+</script>
+</body>
+</html>

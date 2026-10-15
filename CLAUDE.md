@@ -11,12 +11,14 @@ P&ID image -> graph.json -> CSV / SQL / GraphML / Cypher. Agent skill + Deep Age
 - Format / lint: `uvx ruff format . && uvx ruff check .`
 - Scorer tests: `(cd eval && uv run python test_score.py ../samples/open100-1.graphml 2288 1528)`
 - Samples: `uv run python eval/fetch_samples.py`
-- One run: `TILED=1 EFFORT=medium PIPE_MODEL=gpt-6-sol eval/run_one.sh deepagents gpt-6-luna open100-1 1`
+- One run: `TILED=1 EFFORT=low eval/run_one.sh deepagents gpt-6.1-sol open100-1 1`
+- Showcase Space: `uv run python space/build.py`, then `hf upload dzakybd/pid-parser space . --type space --exclude build.py` (unset a stale `HF_TOKEN` first)
 
 ## Layout
 - `skills/pid-parser/`: the published skill (`npx skills add dzakybd/pid-parser`). Keep it dependency-light.
 - `agent/run.py`: Deep Agents runner. `eval/`: ground-truth scoring, no model involved.
-- Not in git: `samples/` (OPEN100 has no licence), `runs/` except `runs/results.csv`.
+- Not in git: `samples/` (OPEN100 has no licence), `runs/` except `runs/results.csv`, `space/data/` (CC BY-SA, ships only to the Space).
+- `space/`: static Hugging Face Space, synthetic sheets only.
 
 ## Project Learnings
 - Read connections on the whole sheet, never tile by tile: per-tile pipe passes, cross-tile carry-over and line-label joining all scored lower.

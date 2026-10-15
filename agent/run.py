@@ -2,7 +2,7 @@
 
 One-time login: uv run python -c "from langchain_openai.chatgpt_oauth import login_chatgpt; login_chatgpt()"
 
-Usage: uv run python agent/run.py <workdir> [--model gpt-6-sol] [--effort low|medium|high] [--tiled [--pipe-model gpt-6-sol]]
+Usage: uv run python agent/run.py <workdir> [--model gpt-6.1-sol] [--effort low|medium|high] [--tiled [--pipe-model MODEL]]
 The workdir must contain the drawing (drawing.png or drawing.jpg) and skills/pid-parser/.
 
 --tiled: code runs pass 1 (symbols) tile by tile, one model call per tile, so no tile is skipped.
@@ -130,7 +130,7 @@ def merge(symbols, width, height):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("workdir")
-    ap.add_argument("--model", default="gpt-6-sol")
+    ap.add_argument("--model", default="gpt-6.1-sol")
     ap.add_argument("--effort", choices=["low", "medium", "high"], help="reasoning effort (model default if unset)")
     ap.add_argument("--tiled", action="store_true", help="code runs pass 1 (symbols) tile by tile")
     ap.add_argument("--pipe-model", help="model for the agent: connections, validate, export (default: --model)")

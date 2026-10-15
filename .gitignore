@@ -8,3 +8,4 @@ runs/_pilot/
 .env
 runs/*
 !runs/results.csv
+space/data/
