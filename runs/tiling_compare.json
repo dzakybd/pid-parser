@@ -292,50 +292,6 @@
     "f1": 0.94
   },
   {
-    "sheet": "dpid-126",
-    "model": "claude-sonnet-5-5",
-    "mode": "whole",
-    "calls": 1,
-    "pred": 136,
-    "gt": 177,
-    "precision": 0.96,
-    "recall": 0.73,
-    "f1": 0.83
-  },
-  {
-    "sheet": "dpid-126",
-    "model": "claude-sonnet-5-5",
-    "mode": "tiled",
-    "calls": 12,
-    "pred": 199,
-    "gt": 177,
-    "precision": 0.88,
-    "recall": 0.99,
-    "f1": 0.93
-  },
-  {
-    "sheet": "dpid-156",
-    "model": "claude-sonnet-5-5",
-    "mode": "whole",
-    "calls": 1,
-    "pred": 74,
-    "gt": 181,
-    "precision": 0.96,
-    "recall": 0.39,
-    "f1": 0.56
-  },
-  {
-    "sheet": "dpid-156",
-    "model": "claude-sonnet-5-5",
-    "mode": "tiled",
-    "calls": 12,
-    "pred": 187,
-    "gt": 181,
-    "precision": 0.94,
-    "recall": 0.97,
-    "f1": 0.95
-  },
-  {
     "sheet": "dpid-36",
     "model": "claude-sonnet-5-5",
     "mode": "whole",
@@ -356,5 +312,93 @@
     "precision": 0.93,
     "recall": 0.99,
     "f1": 0.96
+  },
+  {
+    "sheet": "dpid-126",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 146,
+    "gt": 177,
+    "precision": 0.95,
+    "recall": 0.79,
+    "f1": 0.86
+  },
+  {
+    "sheet": "dpid-126",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 12,
+    "pred": 185,
+    "gt": 177,
+    "precision": 0.94,
+    "recall": 0.98,
+    "f1": 0.96
+  },
+  {
+    "sheet": "dpid-126",
+    "model": "claude-sonnet-5-5",
+    "mode": "stitched",
+    "calls": 12,
+    "pred": 175,
+    "gt": 177,
+    "precision": 0.98,
+    "recall": 0.97,
+    "f1": 0.98
+  },
+  {
+    "sheet": "dpid-126",
+    "model": "claude-sonnet-5-5",
+    "mode": "stitched_fb",
+    "calls": 12,
+    "pred": 178,
+    "gt": 177,
+    "precision": 0.97,
+    "recall": 0.98,
+    "f1": 0.97
+  },
+  {
+    "sheet": "dpid-156",
+    "model": "claude-sonnet-5-5",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 149,
+    "gt": 181,
+    "precision": 0.93,
+    "recall": 0.77,
+    "f1": 0.84
+  },
+  {
+    "sheet": "dpid-156",
+    "model": "claude-sonnet-5-5",
+    "mode": "tiled",
+    "calls": 12,
+    "pred": 191,
+    "gt": 181,
+    "precision": 0.93,
+    "recall": 0.98,
+    "f1": 0.96
+  },
+  {
+    "sheet": "dpid-156",
+    "model": "claude-sonnet-5-5",
+    "mode": "stitched",
+    "calls": 12,
+    "pred": 178,
+    "gt": 181,
+    "precision": 0.99,
+    "recall": 0.98,
+    "f1": 0.99
+  },
+  {
+    "sheet": "dpid-156",
+    "model": "claude-sonnet-5-5",
+    "mode": "stitched_fb",
+    "calls": 12,
+    "pred": 183,
+    "gt": 181,
+    "precision": 0.97,
+    "recall": 0.98,
+    "f1": 0.98
   }
 ]

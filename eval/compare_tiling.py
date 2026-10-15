@@ -108,8 +108,7 @@ def main():
         nodes_by_mode = {
             "whole": merge(whole_symbols(model, image, w, h), w, h),
             "tiled": merge([s for _, s in detections], w, h),  # union of the tiles, fuzzy duplicate merge
-            "stitched": stitch(detections, tile_boxes, w, h),  # tile ownership
-            "stitched_fb": stitch(detections, tile_boxes, w, h, fallback=True),  # ownership + owner-missed fallback
+            "stitched": stitch(detections, tile_boxes, w, h),  # tile ownership: what agent/run.py --tiled uses
         }
         for mode, nodes in nodes_by_mode.items():
             graph = {"image": {"width": w, "height": h}, "nodes": nodes, "edges": []}
