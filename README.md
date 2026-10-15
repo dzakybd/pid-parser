@@ -61,7 +61,7 @@ mkdir -p work/skills && cp -R skills/pid-parser work/skills/ && cp drawing.png w
 uv run python agent/run.py work --model gpt-6.1-sol --effort low --tiled
 ```
 
-This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile. A Deep Agent then does the connections, validation and export, on `--pipe-model` if you want a different model for that part. Low and medium effort scored the same within noise; low is about 1.5x faster. Without `--tiled`, one agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
+This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile. A Deep Agent then does the connections, validation and export, on `--pipe-model` if you want a different model for that part. Low and medium effort scored the same within noise; low took about 30% less time. Without `--tiled`, one agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
 
 ## Evaluation
 
