@@ -32,7 +32,27 @@ Skip this pass if `<workdir>/graph.json` already lists the symbols (some pipelin
 uv run SKILL_DIR/scripts/mark.py <workdir>/graph.json <workdir>/tiles
 ```
 
-This draws every node id on `marked_overview.png` and `marked_tile_<row>_<col>.png`. Open **every** marked tile and follow each drawn line from end to end. Record in `notes.md` which ids it connects, where it branches, and its printed line number. A pipe that runs across several tiles is one pipe: use its line number to join the pieces. Then add the edges to `graph.json`, plus a `junction` node at every tee. If you find a symbol that has no id, add it as a node.
+This draws every symbol id on `marked_overview.png` and on `marked_tile_<row>_<col>.png`. Then read **every** marked tile, one at a time, in the order `tiles.json` lists them. Keep a checklist with one item per tile and tick each off; do not stop or write the summary before the last tile is done. The overview is too coarse to trace pipes on a dense sheet, so the tiles are where the pipes are read.
+
+For each tile:
+1. Open the marked tile and follow each drawn line from end to end.
+2. Append one line to `<workdir>/pipes.txt` for every pipe: the ids it joins, separated by spaces. A tee lists all its branches on one line. Start the line with `signal` for a dashed or instrument line, and put the printed line number last, after `|`. An inline valve splits a pipe, so `A - valve - B` is two lines, `A valve` and `valve B`.
+
+```
+s12 s40
+s7 s9 s15 | SIZE-MSS-140076
+signal s3 s21
+```
+
+3. When a line leaves the tile, check the overview or the neighbouring tile to see which symbol it reaches. Tiles overlap, so the same pipe may appear in two tiles; listing it twice is fine.
+
+When all tiles are read, build the edges:
+
+```bash
+python3 SKILL_DIR/scripts/add_pipes.py <workdir>/graph.json <workdir>/pipes.txt
+```
+
+It rebuilds every edge and every tee junction from `pipes.txt` (so you can add lines and run it again) and warns about any id that does not exist. Do not write edges or junctions into `graph.json` by hand. If you find a symbol that has no id, add it to `graph.json` as a node first.
 
 ## 4. `graph.json` format
 
@@ -51,11 +71,11 @@ This draws every node id on `marked_overview.png` and `marked_tile_<row>_<col>.p
 
 Node `type` is one of: `valve`, `control_valve`, `relief_valve`, `check_valve`, `pump`, `compressor`, `tank`, `vessel`, `column`, `heat_exchanger`, `instrument`, `fitting` (reducer, flange, nozzle, blind, strainer, flow element), `off_page` (connector arrow or box to another sheet), `equipment` (anything else), `junction`.
 
-Edge `kind` is `process` (pipe) or `signal` (dashed or instrument line). `line` is the printed line number if one labels that pipe, else omit it.
+Edge `kind` is `process` (pipe) or `signal` (dashed or instrument line). `line` is the printed line number if one labels that pipe, else omit it. `add_pipes.py` (step 3) writes the edges and junctions for you from `pipes.txt`, so this format is what you check, not what you type.
 
 Rules:
 - **Edges follow drawn lines only.** Connect two nodes when a line runs between them with no other symbol in between. An inline valve splits a pipe: `A - valve - B` is two edges, not `A - B`.
-- **Tees are `junction` nodes.** Where three or more pipe ends meet, add a junction at that point and connect each branch to it. Two lines that cross without a dot or tee are not connected.
+- **Tees are `junction` nodes.** Where three or more pipe ends meet, put all the branches on one line of `pipes.txt`; `add_pipes.py` makes the junction. Two lines that cross without a dot or tee are not connected.
 - **Tags:** copy the text exactly (`TE 14089A`). If you cannot read it, use `null`. Never guess a number.
 - **Boxes** are in original image pixels from the grid labels. Junction boxes are a small box around the point.
 - **Digitize the sheet as drawn.** A detail or section view that repeats equipment gets its own nodes too; give them the same tag. Do not merge repeats.
@@ -67,7 +87,7 @@ Rules:
 python3 SKILL_DIR/scripts/validate.py <workdir>/graph.json
 ```
 
-Fix every `ERROR` and re-run until it prints `OK`. Review each `WARN`: an isolated valve or a junction with fewer than three edges usually means a missed connection; look at that tile again.
+Fix every `ERROR` and re-run until it prints `OK`. An error that says most symbols have no connection means the pipe pass is not finished: go back to step 3 and read the tiles you have not read yet. Review each `WARN`: an isolated valve or a junction with fewer than three edges usually means a missed connection; look at that tile again.
 
 ## 6. Export
 

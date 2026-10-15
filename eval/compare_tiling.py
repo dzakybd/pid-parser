@@ -30,6 +30,7 @@ class ClaudeCLI:
 
     def __init__(self, model):
         self.model = model
+        self.cost = 0.0  # dollars the CLI reports, summed over calls
 
     def with_structured_output(self, schema):
         self.schema = schema
@@ -64,6 +65,7 @@ class ClaudeCLI:
             )
         events, _ = json.JSONDecoder().raw_decode(out.stdout)
         result = next(e for e in reversed(events) if e.get("type") == "result")
+        self.cost += result.get("total_cost_usd", 0.0)
         if "structured_output" not in result:  # e.g. a usage limit: say so instead of a bare KeyError
             raise RuntimeError(f"claude returned no structured output: {str(result.get('result'))[:300]}")
         return self.schema.model_validate(result["structured_output"])

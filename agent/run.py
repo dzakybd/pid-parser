@@ -40,6 +40,7 @@ from langchain_openai.chat_models.codex import _ChatOpenAICodex
 from PIL import Image
 from pydantic import BaseModel
 
+MAX_RETRIES = 2  # times the agent is sent back when validate.py still fails after it stops
 MAX_SIDE = 3600  # same as skills/pid-parser/scripts/tile.py; larger images exceed the API's image limit
 
 SYSTEM = """You digitize engineering drawings. File tools and shell commands both use the real absolute
@@ -112,15 +113,20 @@ def tile_symbols(model, tiles_dir):
     return detections, meta["tiles"], meta["width"], meta["height"]
 
 
-def whole_symbols(model, image, width, height):
-    """Pass 1 in one call on the whole sheet, downscaled like tile.py so it fits the API's image limit."""
+def whole_image_b64(image):
+    """The whole sheet as a base64 PNG, downscaled like tile.py so it fits the API's image limit."""
     img = Image.open(image).convert("RGB")
     scale = min(1.0, MAX_SIDE / max(img.size))
     if scale < 1:
         img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
     buf = io.BytesIO()
     img.save(buf, "PNG")
-    b64 = base64.b64encode(buf.getvalue()).decode()
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def whole_symbols(model, image, width, height):
+    """Pass 1 in one call on the whole sheet."""
+    b64 = whole_image_b64(image)
     msg = HumanMessage(
         content=[
             {"type": "text", "text": TILE_PROMPT},
@@ -325,10 +331,13 @@ def main():
             subprocess.run(
                 [sys.executable, skill / "scripts" / "export.py", work / "graph.json", work / "out"], check=True
             )
+        tile_count = len(json.loads((work / "tiles" / "tiles.json").read_text())["tiles"])
         task = (
             f"Use the pid-parser skill (SKILL_DIR is {skill}) on the P&ID at {drawing}. Work directory: {work}. "
             f"Steps 1-2 are done: {work}/tiles has the tiles and {work}/graph.json lists the symbols. "
-            f"Do steps 3, 5 and 6: mark the ids, add the connections, validate and fix, then export to {work}/out."
+            f"Do steps 3, 5 and 6: mark the ids, then read all {tile_count} marked tiles one by one and write every "
+            f"pipe to pipes.txt, build the edges, validate and fix, then export to {work}/out. "
+            "Do not stop before every tile has been read."
         )
     else:
         task = (
@@ -344,8 +353,27 @@ def main():
             skills=[str(work / "skills")],
             backend=LocalShellBackend(root_dir=work, virtual_mode=False, timeout=300, inherit_env=True),
         )
-        result = agent.invoke({"messages": [{"role": "user", "content": task}]}, config={"recursion_limit": 400})
-        messages = result["messages"]
+        messages = [{"role": "user", "content": task}]
+        for attempt in range(MAX_RETRIES + 1):
+            result = agent.invoke({"messages": messages}, config={"recursion_limit": 400})
+            messages = result["messages"]
+            check = subprocess.run(
+                [sys.executable, skill / "scripts" / "validate.py", work / "graph.json"],
+                capture_output=True,
+                text=True,
+                check=False,  # a failing validation is the signal, not an error
+            )
+            if check.returncode == 0 or attempt == MAX_RETRIES:
+                break
+            # A small model can stop early. The validator says so (most symbols unconnected), so send it back.
+            problem = (check.stdout + check.stderr)[-1500:]
+            messages.append(
+                {
+                    "role": "user",
+                    "content": f"validate.py still fails:\n{problem}\nContinue with the tiles you have not read "
+                    "yet, then build the edges, validate and export again.",
+                }
+            )
     elapsed = time.time() - start
 
     total = tokens(usage)

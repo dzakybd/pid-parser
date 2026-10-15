@@ -28,6 +28,7 @@ TYPES = {
 }
 KINDS = {"process", "signal"}
 TAG_RE = re.compile(r"^[A-Z]{1,6}[- ]?[0-9X]")
+ISOLATED_MAX = 0.4  # in the PID2Graph ground truth at most 17% of symbols have no connection, in good graphs 18%
 
 
 def check(graph):
@@ -79,6 +80,14 @@ def check(graph):
         seen.add(key)
         degree[s] += 1
         degree[t] += 1
+
+    symbols = [n for n in nodes if n.get("type") != "junction"]
+    alone = [n for n in symbols if degree[n.get("id")] == 0]
+    if len(symbols) >= 4 and len(alone) > ISOLATED_MAX * len(symbols):
+        errors.append(
+            f"{len(alone)} of {len(symbols)} symbols have no connection: the pipe pass is not finished "
+            "(open the marked tiles you have not read yet and add their pipes)"
+        )
 
     tags = Counter(n["tag"] for n in nodes if n.get("tag"))
     for tag, count in tags.items():

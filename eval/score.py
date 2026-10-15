@@ -46,10 +46,12 @@ def match(pred, gt):
 
 
 def symbol_f1(m, pr_pairs, gt_pairs):
-    """Macro average over matched symbols of the F1 between a symbol's predicted and true neighbours.
+    """Macro average, over the real symbols, of the F1 between a symbol's predicted and true neighbours.
 
     Pair F1 counts every connected pair, so one header joining 20 symbols weighs 190 pairs. Here the same
-    header weighs 20 symbols, which keeps a few big networks from deciding the score on a dense sheet."""
+    header weighs 20 symbols, which keeps a few big networks from deciding the score on a dense sheet. Every
+    real symbol that has a neighbour counts, and one the model missed scores 0, so finding few symbols cannot
+    look good."""
     pred = defaultdict(set)
     for pair in pr_pairs:
         a, b = tuple(pair)
@@ -62,7 +64,7 @@ def symbol_f1(m, pr_pairs, gt_pairs):
         true[a].add(b)
         true[b].add(a)
     scores = []
-    for g in set(m.values()):
+    for g in set(true) | set(m.values()):
         t, p = true[g], pred[g]
         if not t and not p:
             continue
