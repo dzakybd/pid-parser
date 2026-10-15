@@ -8,7 +8,7 @@ The repo has three parts:
 - `agent/run.py`: the same skill run by a LangChain Deep Agent on a ChatGPT sign-in (no API key)
 - `eval/`: scoring against the PID2Graph ground truth on a handful of sheets
 
-See it on three sample sheets, no install needed: [huggingface.co/spaces/dzakybd/pid-parser](https://huggingface.co/spaces/dzakybd/pid-parser).
+See it on three sample sheets, no install needed: [huggingface.co/spaces/dzakybd/pid-parser](https://huggingface.co/spaces/dzakybd/pid-parser). The write-up, step by step: [dzaky.ai.id/en/blog/pid-parser-pid-to-graph](https://dzaky.ai.id/en/blog/pid-parser-pid-to-graph) ([Bahasa Indonesia](https://dzaky.ai.id/id/blog/pid-parser-pid-to-graph)).
 
 ## Install the skill
 
