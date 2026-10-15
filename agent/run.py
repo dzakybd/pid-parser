@@ -2,17 +2,21 @@
 
 One-time login: uv run python -c "from langchain_openai.chatgpt_oauth import login_chatgpt; login_chatgpt()"
 
-Usage: uv run python agent/run.py <workdir> [--model gpt-6.1-sol] [--effort low|medium|high] [--tiled [--pipe-model MODEL]]
+Usage: uv run python agent/run.py <workdir> [--model gpt-6.1-sol] [--effort low|medium|high] [--tiled | --whole] [--pipe-model MODEL]
 The workdir must contain the drawing (drawing.png or drawing.jpg) and skills/pid-parser/.
 
 --tiled: code runs pass 1 (symbols) tile by tile, one model call per tile, so no tile is skipped.
 The agent then reads the connections on the whole sheet (pass 2), validates and exports, on
 --pipe-model if set. Per-tile connection passes were tried and lost to the whole-sheet agent:
 pipes cross tiles, so reading them needs the whole sheet.
+
+--whole: like --tiled, but pass 1 is one call on the whole sheet (downscaled to MAX_SIDE like tile.py).
+The tiles are still made for the agent's pipe pass.
 """
 
 import argparse
 import base64
+import io
 import json
 import subprocess
 import sys
@@ -24,7 +28,10 @@ from deepagents import create_deep_agent
 from deepagents.backends import LocalShellBackend
 from langchain_core.messages import HumanMessage
 from langchain_openai.chat_models.codex import _ChatOpenAICodex
+from PIL import Image
 from pydantic import BaseModel
+
+MAX_SIDE = 3600  # same as skills/pid-parser/scripts/tile.py; larger images exceed the API's image limit
 
 SYSTEM = """You digitize engineering drawings. File tools and shell commands both use the real absolute
 paths given in the task. Work without asking questions; nobody will answer. Finish by printing a short summary."""
@@ -96,6 +103,26 @@ def tile_symbols(model, tiles_dir):
     return symbols, meta["width"], meta["height"]
 
 
+def whole_symbols(model, image, width, height):
+    """Pass 1 in one call on the whole sheet, downscaled like tile.py so it fits the API's image limit."""
+    img = Image.open(image).convert("RGB")
+    scale = min(1.0, MAX_SIDE / max(img.size))
+    if scale < 1:
+        img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    b64 = base64.b64encode(buf.getvalue()).decode()
+    msg = HumanMessage(
+        content=[
+            {"type": "text", "text": TILE_PROMPT},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+        ]
+    )
+    result = model.with_structured_output(TileSymbols).invoke([msg])
+    box = [0, 0, width, height]
+    return [s.model_copy(update={"bbox": to_original(s.bbox, box)}) for s in result.symbols if len(s.bbox) == 4]
+
+
 def merge(symbols, width, height):
     """Collapse duplicates from overlapping tiles: same spot means same symbol."""
     boxes = []
@@ -132,7 +159,9 @@ def main():
     ap.add_argument("workdir")
     ap.add_argument("--model", default="gpt-6.1-sol")
     ap.add_argument("--effort", choices=["low", "medium", "high"], help="reasoning effort (model default if unset)")
-    ap.add_argument("--tiled", action="store_true", help="code runs pass 1 (symbols) tile by tile")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--tiled", action="store_true", help="code runs pass 1 (symbols) tile by tile")
+    mode.add_argument("--whole", action="store_true", help="code runs pass 1 in one call on the whole sheet")
     ap.add_argument("--pipe-model", help="model for the agent: connections, validate, export (default: --model)")
     args = ap.parse_args()
 
@@ -142,13 +171,18 @@ def main():
     model = _ChatOpenAICodex(model=args.model, **({"reasoning": {"effort": args.effort}} if args.effort else {}))
 
     start = time.time()
-    if args.tiled:
+    if args.tiled or args.whole:
         subprocess.run([sys.executable, skill / "scripts" / "tile.py", drawing, work / "tiles"], check=True)
-        symbols, width, height = tile_symbols(model, work / "tiles")
+        if args.whole:
+            meta = json.loads((work / "tiles" / "tiles.json").read_text())
+            width, height = meta["width"], meta["height"]
+            symbols = whole_symbols(model, drawing, width, height)
+        else:
+            symbols, width, height = tile_symbols(model, work / "tiles")
         nodes = merge(symbols, width, height)
         graph = {"image": {"file": drawing.name, "width": width, "height": height}, "nodes": nodes, "edges": []}
         (work / "graph.json").write_text(json.dumps(graph, indent=2))
-        print(f"pass 1: {len(symbols)} tile detections -> {len(nodes)} symbols")
+        print(f"pass 1: {len(symbols)} detections -> {len(nodes)} symbols")
         if args.pipe_model:
             model = _ChatOpenAICodex(
                 model=args.pipe_model, **({"reasoning": {"effort": args.effort}} if args.effort else {})
@@ -182,11 +216,12 @@ def main():
         "model": args.model,
         "effort": args.effort,
         "tiled": args.tiled,
+        "whole": args.whole,
         "pipe_model": args.pipe_model,
         "harness": "deepagents",
         "seconds": round(elapsed),
         "tool_calls": sum(len(getattr(m, "tool_calls", None) or []) for m in messages),
-        **usage,  # agent only; the per-tile symbol calls of --tiled are not counted
+        **usage,  # agent only; the pass 1 calls of --tiled/--whole are not counted
     }
     (work / "run.json").write_text(json.dumps(meta, indent=2))
     print(messages[-1].text)

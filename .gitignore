@@ -9,3 +9,4 @@ runs/_pilot/
 runs/*
 !runs/results.csv
 space/data/
+!runs/tiling_compare.json

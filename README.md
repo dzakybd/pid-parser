@@ -61,7 +61,9 @@ mkdir -p work/skills && cp -R skills/pid-parser work/skills/ && cp drawing.png w
 uv run python agent/run.py work --model gpt-6.1-sol --effort low --tiled
 ```
 
-This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile. A Deep Agent then does the connections, validation and export, on `--pipe-model` if you want a different model for that part. Low and medium effort scored the same within noise; low took about 30% less time. Without `--tiled`, one agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
+This uses `_ChatOpenAICodex` from `langchain-openai` 1.7.2 (experimental, private API) with `deepagents`. With `--tiled`, code runs pass 1 with one structured-output call per tile. A Deep Agent then does the connections, validation and export, on `--pipe-model` if you want a different model for that part. Low and medium effort scored the same within noise; low took about 30% less time. `--whole` does pass 1 in one call on the whole sheet instead (see Results). Without either flag, one agent runs the whole skill. Output lands in `work/graph.json` and `work/out/`.
+
+Tested with Python 3.12, deepagents 0.7.25, langchain-openai 1.7.2, langchain-core 1.6.10, langgraph 1.2.15.
 
 ## Evaluation
 
@@ -98,6 +100,13 @@ One run per sheet, so differences under about 0.15 are noise.
 | Deep Agents, gpt-6-sol | Synthetic ×3 | 0.98 | 0.79 | 9 min |
 
 The gpt-6.1-sol runs used only `open100-0` and `open100-1` of the OPEN100 sheets, so compare them with care. With the older models, the dense `open100-0` was the hard case (0.26 connection F1 with luna + sol); gpt-6.1-sol scored 0.84 on it at low effort.
+
+Tiles or the whole sheet for pass 1 (gpt-6.1-sol, low effort, one run per sheet; `eval/compare_tiling.py`, `runs/tiling_compare.json`):
+
+- Symbol pass alone: one whole-sheet call beat tiles on all six sheets (real sheets 0.95-0.97 vs 0.91 symbol F1). Recall was the same; the tile overlaps cost precision.
+- Full pipeline: no gain. Connection F1 0.61 vs 0.75 (`open100-1`) and 0.85 vs 0.84 (`open100-0`) for whole vs tiled; the pipe agent revises the symbol list either way.
+- An agent running the whole skill alone (no code-driven pass 1) scored 0.37 connection F1 on `open100-0` vs 0.84 with `--tiled`.
+- `--tiled` stays the default: the pipe pass uses the marked tiles, 7000x4500 sheets exceed the API's image limit in one call, and smaller models need tiles (gpt-6-luna symbol F1 0.33 → 0.81).
 
 Tried and dropped:
 

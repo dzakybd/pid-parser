@@ -1,0 +1,122 @@
+[
+  {
+    "sheet": "open100-0",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 97,
+    "gt": 102,
+    "precision": 1.0,
+    "recall": 0.95,
+    "f1": 0.97
+  },
+  {
+    "sheet": "open100-0",
+    "mode": "tiled",
+    "calls": 6,
+    "pred": 111,
+    "gt": 102,
+    "precision": 0.87,
+    "recall": 0.95,
+    "f1": 0.91
+  },
+  {
+    "sheet": "open100-1",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 37,
+    "gt": 41,
+    "precision": 1.0,
+    "recall": 0.9,
+    "f1": 0.95
+  },
+  {
+    "sheet": "open100-1",
+    "mode": "tiled",
+    "calls": 6,
+    "pred": 40,
+    "gt": 41,
+    "precision": 0.93,
+    "recall": 0.9,
+    "f1": 0.91
+  },
+  {
+    "sheet": "open100-2",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 106,
+    "gt": 101,
+    "precision": 0.93,
+    "recall": 0.98,
+    "f1": 0.96
+  },
+  {
+    "sheet": "open100-2",
+    "mode": "tiled",
+    "calls": 6,
+    "pred": 116,
+    "gt": 101,
+    "precision": 0.85,
+    "recall": 0.98,
+    "f1": 0.91
+  },
+  {
+    "sheet": "synth-0",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 21,
+    "gt": 20,
+    "precision": 0.95,
+    "recall": 1.0,
+    "f1": 0.98
+  },
+  {
+    "sheet": "synth-0",
+    "mode": "tiled",
+    "calls": 12,
+    "pred": 21,
+    "gt": 20,
+    "precision": 0.86,
+    "recall": 0.9,
+    "f1": 0.88
+  },
+  {
+    "sheet": "synth-1",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 23,
+    "gt": 23,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  {
+    "sheet": "synth-1",
+    "mode": "tiled",
+    "calls": 12,
+    "pred": 23,
+    "gt": 23,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  {
+    "sheet": "synth-2",
+    "mode": "whole",
+    "calls": 1,
+    "pred": 23,
+    "gt": 23,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  {
+    "sheet": "synth-2",
+    "mode": "tiled",
+    "calls": 12,
+    "pred": 24,
+    "gt": 23,
+    "precision": 0.96,
+    "recall": 1.0,
+    "f1": 0.98
+  }
+]
