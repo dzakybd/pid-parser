@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+samples/
+runs/**/drawing.*
+runs/**/tiles/
+runs/**/overlay.png
+runs/_pilot/
+.env
+runs/*
+!runs/results.csv

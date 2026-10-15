@@ -1,0 +1,20 @@
+[project]
+name = "pid-parser"
+version = "0.1.0"
+description = "P&ID image to tables and graph: agent skill, Deep Agents runner and evaluation"
+readme = "README.md"
+authors = [
+    { name = "Dzaky Zakiyal Fawwaz", email = "dzakybd@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "deepagents>=0.7.25",
+    "langchain-openai==1.7.2",
+    "networkx>=3.7",
+    "opencv-python-headless>=5.0.0.93",
+    "pillow>=12.3.0",
+    "remotezip>=0.12.6",
+]
+
+[tool.ruff]
+line-length = 120
