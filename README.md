@@ -116,6 +116,8 @@ Tried and dropped:
 
 Limits: `connect.py` needs exact boxes and clean lines, loses dashed signal lines (so there are no `signal` edges), and was scored on this one sheet. I did not measure small or scanned sheets.
 
+Next: snap boxes to the ink or use a trained symbol detector, dash-aware line detection, arrowheads for flow direction (needed for root-cause analysis), crossing detection, OCR for tags, linking off-page connectors across sheets, and more sheets and runs.
+
 ## Data and licences
 
 - **PID2Graph:** [Zenodo 14803338](https://zenodo.org/records/14803338), CC BY-SA 4.0 (paper: [arXiv 2411.13929](https://arxiv.org/abs/2411.13929)). The sheets here come from its "Dataset PID" part (Digitize-PID, Paliwal et al.), also CC BY-SA 4.0. `fetch_samples.py` downloads them; `samples/` and run outputs stay out of git, and the showcase Space ships one sheet and its outputs under CC BY-SA 4.0.
